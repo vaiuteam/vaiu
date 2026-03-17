@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 // import { Code2, Loader2 } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import {
   GoCheckCircle,
   GoCheckCircleFill,
@@ -56,6 +57,13 @@ const navItems = [
     icon: HiOutlineUserGroup,
     activeIcon: HiUserGroup,
   },
+  {
+    label: "Docs",
+    href: "/docs",
+    icon: BookOpen,
+    activeIcon: BookOpen,
+    scope: "global",
+  },
   // {
   //   label: "Contributions",
   //   icon: Code2,
@@ -63,6 +71,31 @@ const navItems = [
   //   dynamicRedirect: true,
   // },
 ];
+
+type NavItem = (typeof navItems)[number];
+
+const getResolvedHref = (workspaceId: string, item: NavItem) => {
+  if (item.scope === "global") {
+    return item.href;
+  }
+
+  if (item.href === "/") {
+    return `/workspaces/${workspaceId}`;
+  }
+
+  return `/workspaces/${workspaceId}${item.href ?? ""}`;
+};
+
+const isItemActive = (pathname: string, resolvedHref: string, label: string) => {
+  if (label === "Home") {
+    return (
+      pathname === resolvedHref ||
+      pathname === `${resolvedHref}/`
+    );
+  }
+
+  return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
+};
 
 export const Navigation = () => {
   const workspaceId = useWorkspaceId();
@@ -94,21 +127,14 @@ export const Navigation = () => {
     return (
       <TooltipProvider>
         <ul className="flex flex-col gap-1">
-          {navItems.map(({ activeIcon, href, icon, label }) => {
-            const absoluteHref = `/workspaces/${workspaceId}${href ?? ""}`;
-
-            // Check if path is active, with special case for Home
-            const isActive =
-              label === "Home"
-                ? pathname === absoluteHref ||
-                  pathname === `/workspaces/${workspaceId}` ||
-                  pathname === `/workspaces/${workspaceId}/`
-                : pathname === absoluteHref ||
-                  pathname.startsWith(`${absoluteHref}/`);
+          {navItems.map((item) => {
+            const { activeIcon, icon, label } = item;
+            const resolvedHref = getResolvedHref(workspaceId, item);
+            const isActive = isItemActive(pathname, resolvedHref, label);
             const Icon = isActive ? activeIcon : icon;
 
             return (
-              <li key={href}>
+              <li key={`${label}-${resolvedHref}`}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -122,7 +148,7 @@ export const Navigation = () => {
                       )}
                       asChild
                     >
-                      <Link href={absoluteHref}>
+                      <Link href={resolvedHref}>
                         <Icon className="size-12" />
                       </Link>
                     </Button>
@@ -141,17 +167,10 @@ export const Navigation = () => {
 
   return (
     <ul className="flex flex-col">
-      {navItems.map(({ activeIcon, href, icon, label }) => {
-        const absoluteHref = `/workspaces/${workspaceId}${href ?? ""}`;
-
-        // Check if path is active, with special case for Home
-        const isActive =
-          label === "Home"
-            ? pathname === absoluteHref ||
-              pathname === `/workspaces/${workspaceId}` ||
-              pathname === `/workspaces/${workspaceId}/`
-            : pathname === absoluteHref ||
-              pathname.startsWith(`${absoluteHref}/`);
+      {navItems.map((item) => {
+        const { activeIcon, icon, label } = item;
+        const resolvedHref = getResolvedHref(workspaceId, item);
+        const isActive = isItemActive(pathname, resolvedHref, label);
         const Icon = isActive ? activeIcon : icon;
 
         // Commented out Contributions dynamic redirect logic
@@ -193,9 +212,9 @@ export const Navigation = () => {
         // }
 
         return (
-          <li key={href}>
+          <li key={`${label}-${resolvedHref}`}>
             <Link
-              href={absoluteHref}
+              href={resolvedHref}
               className={cn(
                 "m-0.5 flex items-center gap-2.5 rounded-md p-2.5 font-medium transition",
                 isActive
