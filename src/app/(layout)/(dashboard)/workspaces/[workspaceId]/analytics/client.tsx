@@ -158,6 +158,47 @@ interface PopulatedMember extends Member {
   email: string;
 }
 
+const buildProjectTaskCounts = (
+  issues: { projectId: string }[] | undefined,
+): Record<string, number> => {
+  if (!issues) return {};
+
+  return issues.reduce<Record<string, number>>((counts, issue) => {
+    counts[issue.projectId] = (counts[issue.projectId] || 0) + 1;
+    return counts;
+  }, {});
+};
+
+const buildMemberTaskCounts = (
+  issues:
+    | {
+        assigneeId: string;
+        status: IssueStatus;
+      }[]
+    | undefined,
+): Record<string, { assigned: number; completed: number }> => {
+  if (!issues) return {};
+
+  return issues.reduce<Record<string, { assigned: number; completed: number }>>(
+    (counts, issue) => {
+      if (!issue.assigneeId) return counts;
+
+      if (!counts[issue.assigneeId]) {
+        counts[issue.assigneeId] = { assigned: 0, completed: 0 };
+      }
+
+      counts[issue.assigneeId].assigned += 1;
+
+      if (issue.status === IssueStatus.DONE) {
+        counts[issue.assigneeId].completed += 1;
+      }
+
+      return counts;
+    },
+    {},
+  );
+};
+
 const AnalyticsOverview = ({ workspaceId }: { workspaceId: string }) => {
   const { data: analytics, isLoading: analyticsLoading } = useGetWorkspaceAnalytics({ workspaceId });
   const { data: projects, isLoading: projectsLoading } = useGetProjects({ workspaceId });
@@ -361,21 +402,21 @@ const AnalyticsProjects = ({ workspaceId }: { workspaceId: string }) => {
 
   const { data: issuesData } = useGetIssues({ workspaceId });
 
-  const projectStats = useMemo(() => {
-    if (!data?.documents || !issuesData?.documents) return [];
+  const projectTaskCounts = useMemo(
+    () => buildProjectTaskCounts(issuesData?.documents),
+    [issuesData],
+  );
 
-    const taskCounts: Record<string, number> = {};
-    issuesData.documents.forEach(issue => {
-      const pid = issue.projectId;
-      taskCounts[pid] = (taskCounts[pid] || 0) + 1;
-    });
+  const projectStats = useMemo(() => {
+    if (!data?.documents) return [];
 
     return data.documents.map(project => ({
+      id: project.$id,
       name: project.name,
-      tasks: taskCounts[project.$id] || 0,
+      tasks: projectTaskCounts[project.$id] || 0,
     })).sort((a, b) => b.tasks - a.tasks); // Sort by most tasks
 
-  }, [data, issuesData]);
+  }, [data, projectTaskCounts]);
 
   if (isLoading) return <div className="h-64 animate-pulse bg-muted rounded-lg" />;
   if (!data?.documents.length) return <div>No projects found.</div>;
@@ -430,7 +471,7 @@ const AnalyticsProjects = ({ workspaceId }: { workspaceId: string }) => {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  {(issuesData?.documents.filter(i => i.projectId === project.$id).length || 0)} tasks
+                  {projectTaskCounts[project.$id] || 0} tasks
                 </p>
               </CardContent>
             </Card>
@@ -447,25 +488,32 @@ const AnalyticsMembers = ({ workspaceId }: { workspaceId: string }) => {
   const { data: members, isLoading: membersLoading } = useGetMembers({ workspaceId });
   const { data: issues, isLoading: issuesLoading } = useGetIssues({ workspaceId });
 
+  const memberTaskCounts = useMemo(
+    () => buildMemberTaskCounts(issues?.documents),
+    [issues],
+  );
+
   const memberStats = useMemo(() => {
-    if (!members?.documents || !issues?.documents) return [];
+    if (!members?.documents) return [];
 
     const stats = (members.documents as unknown as PopulatedMember[]).map(member => {
-      const assignedTasks = issues.documents.filter(i => i.assigneeId === member.$id).length;
-      const completedTasks = issues.documents.filter(i => i.assigneeId === member.$id && i.status === IssueStatus.DONE).length;
+      const counts = memberTaskCounts[member.$id] || {
+        assigned: 0,
+        completed: 0,
+      };
 
       return {
         name: member.name || member.email,
         role: member.role,
-        assigned: assignedTasks,
-        completed: completedTasks,
+        assigned: counts.assigned,
+        completed: counts.completed,
         userId: member.userId
       };
     });
 
     return stats.sort((a, b) => b.assigned - a.assigned);
 
-  }, [members, issues]);
+  }, [memberTaskCounts, members]);
 
   if (membersLoading || issuesLoading) return <div className="h-64 animate-pulse bg-muted rounded-lg" />;
 

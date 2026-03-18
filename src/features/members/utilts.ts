@@ -1,6 +1,6 @@
 import { DATABASE_ID, MEMBERS_ID } from "@/config";
 import { Query, type Databases } from "node-appwrite";
-import { MemberRole } from "./types";
+import { Member, MemberRole } from "./types";
 
 interface GetMemberProps {
   databases: Databases;
@@ -11,12 +11,13 @@ export const getMember = async ({
   databases,
   userId,
   workspaceId,
-}: GetMemberProps) => {
+}: GetMemberProps): Promise<Member | null> => {
   try {
-    const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-      Query.equal("workspaceId", workspaceId),
-      Query.equal("userId", userId),
-    ]);
+    const members = await databases.listDocuments<Member>(
+      DATABASE_ID,
+      MEMBERS_ID,
+      [Query.equal("workspaceId", workspaceId), Query.equal("userId", userId)],
+    );
     return members.documents[0];
   } catch (error: unknown) {
     console.error("Error fetching member:", error);
@@ -31,18 +32,29 @@ interface GetProjectMemberProps {
   userId: string;
 }
 
+type ProjectAccessResult = {
+  isSuperAdmin: boolean;
+  isWorkspaceAdmin: boolean;
+  hasAccess: boolean;
+  member: Member | null;
+};
+
 export const getProjectMember = async ({
   databases,
   userId,
   workspaceId,
   projectId,
-}: GetProjectMemberProps) => {
+}: GetProjectMemberProps): Promise<Member | null> => {
   try {
-    const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-      Query.equal("workspaceId", workspaceId),
-      Query.contains("projectId", projectId),
-      Query.equal("userId", userId),
-    ]);
+    const members = await databases.listDocuments<Member>(
+      DATABASE_ID,
+      MEMBERS_ID,
+      [
+        Query.equal("workspaceId", workspaceId),
+        Query.contains("projectId", projectId),
+        Query.equal("userId", userId),
+      ],
+    );
     return members.documents[0];
   } catch (error: unknown) {
     console.error("Error fetching project member:", error);
@@ -123,5 +135,52 @@ export const hasProjectAccess = async ({
   } catch (error: unknown) {
     console.error("Error checking project access:", error);
     return false;
+  }
+};
+
+export const getProjectAccess = async ({
+  databases,
+  userId,
+  workspaceId,
+  projectId,
+}: GetProjectMemberProps): Promise<ProjectAccessResult> => {
+  try {
+    const isSuper = await isSuperAdmin({ databases, userId });
+    if (isSuper) {
+      return {
+        isSuperAdmin: true,
+        isWorkspaceAdmin: false,
+        hasAccess: true,
+        member: null,
+      };
+    }
+
+    const member = await getMember({ databases, userId, workspaceId });
+    if (!member) {
+      return {
+        isSuperAdmin: false,
+        isWorkspaceAdmin: false,
+        hasAccess: false,
+        member: null,
+      };
+    }
+
+    const isWorkspaceAdmin = member.role === MemberRole.ADMIN;
+    const isProjectMember = (member.projectId || []).includes(projectId);
+
+    return {
+      isSuperAdmin: false,
+      isWorkspaceAdmin,
+      hasAccess: isWorkspaceAdmin || isProjectMember,
+      member,
+    };
+  } catch (error: unknown) {
+    console.error("Error checking project access:", error);
+    return {
+      isSuperAdmin: false,
+      isWorkspaceAdmin: false,
+      hasAccess: false,
+      member: null,
+    };
   }
 };

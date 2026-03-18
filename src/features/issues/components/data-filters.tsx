@@ -26,12 +26,13 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
   const { data: projects, isLoading: projectsLoading } = useGetProjects({
     workspaceId,
+    enabled: !hideProjectFilter,
   });
   const { data: members, isLoading: membersLoading } = useGetMembers({
     workspaceId,
   });
 
-  const isLoading = projectsLoading || membersLoading;
+  const isLoading = membersLoading || (!hideProjectFilter && projectsLoading);
 
   const projectOptions = projects?.documents.map((project) => ({
     value: project.$id,

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { sessionMiddleware } from "@/lib/session-middleware";
-import { getMember, isSuperAdmin } from "@/features/members/utilts";
+import { getProjectAccess } from "@/features/members/utilts";
 import { DATABASE_ID, PROJECTS_ID, PR_ID, AI_TESTS_ID } from "@/config";
 import { Project } from "@/features/projects/types";
 import { Octokit, RequestError } from "octokit";
@@ -22,6 +22,31 @@ import { AIReview } from "../types-ai";
 import { AITestGeneration, TestStatus, TestType } from "../types-tests";
 import { analyzeWithGemini, PRAnalysisInput, generateTestCases } from "@/lib/ai-service";
 
+const getProjectContext = async ({
+  databases,
+  userId,
+  projectId,
+}: {
+  databases: Databases;
+  userId: string;
+  projectId: string;
+}) => {
+  const project = await databases.getDocument<Project>(
+    DATABASE_ID,
+    PROJECTS_ID,
+    projectId,
+  );
+
+  const access = await getProjectAccess({
+    databases,
+    userId,
+    workspaceId: project.workspaceId,
+    projectId,
+  });
+
+  return { project, access };
+};
+
 const app = new Hono()
   .get(
     "/",
@@ -37,29 +62,22 @@ const app = new Hono()
       const user = c.get("user");
       const { workspaceId, projectId, status, search } = c.req.valid("query");
 
-      const project = await databases.getDocument<Project>(
-        DATABASE_ID,
-        PROJECTS_ID,
-        projectId
-      );
+      const { project, access } = await getProjectContext({
+        databases,
+        userId: user.$id,
+        projectId,
+      });
 
       if (!project) {
         return c.json({ error: "Project not found" }, 404);
       }
 
-      // Check if user is a super admin
-      const isSuper = await isSuperAdmin({ databases, userId: user.$id });
+      if (project.workspaceId !== workspaceId) {
+        return c.json({ error: "Project does not belong to this workspace" }, 400);
+      }
 
-      if (!isSuper) {
-        const member = await getMember({
-          databases,
-          workspaceId,
-          userId: user.$id,
-        });
-
-        if (!member) {
-          return c.json({ error: "Unauthorized" }, 401);
-        }
+      if (!access.hasAccess) {
+        return c.json({ error: "Forbidden" }, 403);
       }
 
       // Prefer installation token (workspace-level); fall back to user OAuth token
@@ -153,29 +171,18 @@ const app = new Hono()
         );
       }
 
-      const project = await databases.getDocument<Project>(
-        DATABASE_ID,
-        PROJECTS_ID,
-        projectId
-      );
+      const { project, access } = await getProjectContext({
+        databases,
+        userId: user.$id,
+        projectId,
+      });
 
       if (!project) {
         return c.json({ error: "Project not found" }, 404);
       }
 
-      // Check if user is a super admin
-      const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-      if (!isSuper) {
-        const member = await getMember({
-          databases,
-          workspaceId: project.workspaceId,
-          userId: user.$id,
-        });
-
-        if (!member) {
-          return c.json({ error: "Unauthorized" }, 401);
-        }
+      if (!access.hasAccess) {
+        return c.json({ error: "Forbidden" }, 403);
       }
 
       // Get GitHub OAuth access token
@@ -281,29 +288,18 @@ const app = new Hono()
       const { projectId, prNumber } = c.req.param();
 
       try {
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        // Check if user is a super admin
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         // Get GitHub OAuth access token
@@ -339,29 +335,18 @@ const app = new Hono()
       const { projectId, prNumber } = c.req.param();
 
       try {
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        // Check if user is a super admin
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         // Get GitHub OAuth access token
@@ -427,28 +412,18 @@ const app = new Hono()
       const { projectId, prNumber } = c.req.param();
 
       try {
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         const tests = await databases.listDocuments(
@@ -508,28 +483,18 @@ const app = new Hono()
       const testData = c.req.valid("json");
 
       try {
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         const newTest = await databases.createDocument(
@@ -603,28 +568,18 @@ const app = new Hono()
           return c.json({ error: "Test not found" }, 404);
         }
 
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         const updatedTest = await databases.updateDocument(
@@ -680,28 +635,18 @@ const app = new Hono()
           return c.json({ error: "Test not found" }, 404);
         }
 
-        const project = await databases.getDocument<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          projectId
-        );
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
         }
 
-        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-        if (!isSuper) {
-          const member = await getMember({
-            databases,
-            workspaceId: project.workspaceId,
-            userId: user.$id,
-          });
-
-          if (!member) {
-            return c.json({ error: "Unauthorized" }, 401);
-          }
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
 
         await databases.deleteDocument(

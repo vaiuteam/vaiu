@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { Hono } from "hono";
-import { ID, Query } from "node-appwrite";
+import { ID, Query, type Databases } from "node-appwrite";
 import { zValidator } from "@hono/zod-validator";
 import { sessionMiddleware } from "@/lib/session-middleware";
 
-import { getMember, isSuperAdmin } from "@/features/members/utilts";
+import { getMember, getProjectAccess, isSuperAdmin } from "@/features/members/utilts";
 import {
   DATABASE_ID,
   IMAGES_BUCKET_ID,
@@ -43,6 +43,31 @@ const extractRepoName = (githubUrl: string): string => {
   // Get the last segment and remove .git
   const repoName = segments[segments.length - 1].replace(".git", "");
   return repoName;
+};
+
+const getProjectContext = async ({
+  databases,
+  userId,
+  projectId,
+}: {
+  databases: Databases;
+  userId: string;
+  projectId: string;
+}) => {
+  const project = await databases.getDocument<Project>(
+    DATABASE_ID,
+    PROJECTS_ID,
+    projectId,
+  );
+
+  const access = await getProjectAccess({
+    databases,
+    userId,
+    workspaceId: project.workspaceId,
+    projectId,
+  });
+
+  return { project, access };
 };
 
 const app = new Hono()
@@ -414,26 +439,14 @@ const app = new Hono()
     const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
+    const { project, access } = await getProjectContext({
+      databases,
+      userId: user.$id,
       projectId,
-    );
+    });
 
-    // Check if user is a super admin
-    const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-    if (!isSuper) {
-      // Regular users need to be members of the workspace
-      const member = await getMember({
-        databases,
-        workspaceId: project.workspaceId,
-        userId: user.$id,
-      });
-
-      if (!member) {
-        return c.json({ error: "Unauthorized" }, 401);
-      }
+    if (!access.hasAccess) {
+      return c.json({ error: "Forbidden" }, 403);
     }
 
     return c.json({ data: project });
@@ -443,27 +456,20 @@ const app = new Hono()
     const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
+    const { project, access } = await getProjectContext({
+      databases,
+      userId: user.$id,
       projectId,
-    );
-
-    // Check if user is a super admin
-    const isSuper = await isSuperAdmin({ databases, userId: user.$id });
+    });
 
     let member = null;
 
-    if (!isSuper) {
-      // Regular users need to be members of the workspace
-      member = await getMember({
-        databases,
-        workspaceId: project.workspaceId,
-        userId: user.$id,
-      });
-      if (!member) {
-        return c.json({ error: "Unauthorized" }, 401);
-      }
+    if (!access.hasAccess) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    if (!access.isSuperAdmin) {
+      member = access.member;
     } else {
       // For super admins, we need to get a member record for analytics
       // We'll use the first member record we can find for this user
@@ -473,6 +479,10 @@ const app = new Hono()
         [Query.equal("userId", user.$id), Query.limit(1)],
       );
       member = memberRecords.documents[0];
+    }
+
+    if (!member) {
+      return c.json({ error: "Unable to resolve analytics member context" }, 403);
     }
 
     const now = new Date();
@@ -614,19 +624,14 @@ const app = new Hono()
       const { projectId } = c.req.param();
       const { name, image } = c.req.valid("form");
 
-      const existingProject = await databases.getDocument<Project>(
-        DATABASE_ID,
-        PROJECTS_ID,
-        projectId,
-      );
-      const member = await getMember({
+      const { project: existingProject, access } = await getProjectContext({
         databases,
-        workspaceId: existingProject.workspaceId,
         userId: user.$id,
+        projectId,
       });
 
-      if (!member) {
-        return c.json({ error: "Unauthorized" }, 401);
+      if (!access.hasAccess) {
+        return c.json({ error: "Forbidden" }, 403);
       }
 
       let uploadedImage: string | undefined;
@@ -664,22 +669,15 @@ const app = new Hono()
     const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const existingProject = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
+    const { project: existingProject, access } = await getProjectContext({
+      databases,
+      userId: user.$id,
       projectId,
-    );
+    });
 
-    // Check if user is a super admin
-    const isSuper = await isSuperAdmin({ databases, userId: user.$id });
-
-    if (!isSuper) {
+    if (!access.isSuperAdmin) {
       // Regular users need to be workspace admins or project admins
-      const member = await getMember({
-        databases,
-        workspaceId: existingProject.workspaceId,
-        userId: user.$id,
-      });
+      const member = access.member;
 
       if (!member) {
         return c.json({ error: "Unauthorized access to workspace" }, 401);
@@ -713,12 +711,8 @@ const app = new Hono()
     if (projectMembers.total > 0) {
       // Allow workspace admin, project admin, or super admin to delete project with members
       // This removes all member associations automatically
-      if (!isSuper) {
-        const member = await getMember({
-          databases,
-          workspaceId: existingProject.workspaceId,
-          userId: user.$id,
-        });
+      if (!access.isSuperAdmin) {
+        const member = access.member;
 
         const canDeleteWithMembers =
           member?.role === MemberRole.ADMIN || // Workspace admin
@@ -794,17 +788,12 @@ const app = new Hono()
 
       const { username } = c.req.valid("json");
 
-      const existingProject = await databases.getDocument<Project>(
-        DATABASE_ID,
-        PROJECTS_ID,
-        projectId,
-      );
-
-      const member = await getMember({
+      const { project: existingProject, access } = await getProjectContext({
         databases,
-        workspaceId: existingProject.workspaceId,
         userId: user.$id,
+        projectId,
       });
+      const member = access.member;
 
       if (!member || existingProject.projectAdmin !== member.$id) {
         return c.json({ error: "Unauthorized" }, 401);
@@ -863,6 +852,7 @@ const app = new Hono()
     async (c) => {
       const storage = c.get("storage");
       const databases = c.get("databases");
+      const user = c.get("user");
       const { file, projectId } = c.req.valid("form");
 
       if (!file) {
@@ -870,14 +860,18 @@ const app = new Hono()
       }
 
       try {
-        const project = await databases.getDocument(
-          DATABASE_ID,
-          PROJECTS_ID,
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
           projectId,
-        );
+        });
 
         if (!project) {
           return c.json({ error: "Project not found" }, 404);
+        }
+
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
         }
       } catch (error) {
         console.error("Error fetching project:", error);
@@ -939,13 +933,18 @@ const app = new Hono()
   )
   .get("/:projectId/info", sessionMiddleware, async (c) => {
     const databases = c.get("databases");
+    const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
+    const { project, access } = await getProjectContext({
+      databases,
+      userId: user.$id,
       projectId,
-    );
+    });
+
+    if (!access.hasAccess) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
 
     return c.json({
       data: {
