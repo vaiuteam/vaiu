@@ -81,6 +81,11 @@ export const ProjectIdClient = () => {
     return `/workspaces/${project.workspaceId}/projects/${project.$id}/analytics`;
   }, [project]);
 
+  const navigateTo = (url: string) => {
+    if (!url) return;
+    window.location.assign(url);
+  };
+
   const handleFileUpload = async () => {
     try {
       const result = await openFileUploader();
@@ -173,7 +178,7 @@ export const ProjectIdClient = () => {
 
         <div className="mt-2 flex">
           <MembersList data={members?.documents || []} />
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="ml-2" asChild>
               <Button variant="outline" size="default" className="items-center">
                 <p className="text-sm">Actions</p>
@@ -196,23 +201,26 @@ export const ProjectIdClient = () => {
                 Add collaborator
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild className="gap-2">
-                <Link href={userManagementUrl}>
-                  <UserPlus2 className="h-4 w-4" />
-                  User management
-                </Link>
+              <DropdownMenuItem
+                onSelect={() => navigateTo(userManagementUrl)}
+                className="gap-2"
+              >
+                <UserPlus2 className="h-4 w-4" />
+                User management
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="gap-2">
-                <Link href={analyticsUrl}>
-                  <BarChartHorizontal className="h-4 w-4" />
-                  Analytics
-                </Link>
+              <DropdownMenuItem
+                onSelect={() => navigateTo(analyticsUrl)}
+                className="gap-2"
+              >
+                <BarChartHorizontal className="h-4 w-4" />
+                Analytics
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="gap-2">
-                <Link href={settingsUrl}>
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Link>
+              <DropdownMenuItem
+                onSelect={() => navigateTo(settingsUrl)}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

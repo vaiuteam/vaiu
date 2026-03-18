@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { DocsShell } from "@/components/docs/docs-shell";
 import { getAllDocs, getDocBySlug } from "@/lib/docs";
 
-export default async function DocsPage() {
+export default async function DocsPage () {
     const docs = await getAllDocs();
 
     if (docs.length === 0) {
