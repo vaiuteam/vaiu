@@ -1,8 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-import { Navbar } from "@/components/mainNavbar";
+import { Button } from "@/components/ui/button";
 import type { Doc, DocSummary } from "@/lib/docs";
 import { cn } from "@/lib/utils";
 
@@ -66,10 +70,22 @@ const getDocHref = (slug: string) => {
 };
 
 export const DocsShell = ({ docs, activeSlug, doc }: DocsShellProps) => {
+    const router = useRouter();
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20">
             <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8">
-                <Navbar />
+                <div className="mb-4 pt-6">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.back()}
+                        className="w-fit gap-2 px-2 text-muted-foreground hover:text-foreground"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Button>
+                </div>
 
                 <section className="grid gap-8 pb-14 md:grid-cols-[260px_minmax(0,1fr)]">
                     <aside className="md:sticky md:top-28 md:self-start">

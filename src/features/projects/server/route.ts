@@ -45,6 +45,8 @@ const extractRepoName = (githubUrl: string): string => {
   return repoName;
 };
 
+const IMPORT_ISSUE_BATCH_SIZE = 25;
+
 const getProjectContext = async ({
   databases,
   userId,
@@ -267,7 +269,7 @@ const app = new Hono()
         [
           Query.equal("status", status),
           Query.equal("workspaceId", workspaceId),
-          Query.orderAsc("position"),
+          Query.orderDesc("position"),
           Query.limit(1),
         ],
       );
@@ -277,22 +279,25 @@ const app = new Hono()
           ? highestPositionTask.documents[0].position + 1000
           : 1000;
 
-      // Create all issues in parallel instead of sequentially
-      await Promise.all(
-        data.map((issue) =>
-          databases.createDocument(DATABASE_ID, ISSUES_ID, ID.unique(), {
-            name: issue.title,
-            description: issue.body,
-            status,
-            dueDate: new Date().toISOString(),
-            workspaceId,
-            projectId: project.$id,
-            assigneeId: issue?.assignee?.login,
-            position: newPosition,
-            number: issue.number,
-          })
-        )
-      );
+      for (let i = 0; i < data.length; i += IMPORT_ISSUE_BATCH_SIZE) {
+        const batch = data.slice(i, i + IMPORT_ISSUE_BATCH_SIZE);
+
+        await Promise.all(
+          batch.map((issue, batchIndex) =>
+            databases.createDocument(DATABASE_ID, ISSUES_ID, ID.unique(), {
+              name: issue.title,
+              description: issue.body || "",
+              status,
+              dueDate: new Date().toISOString(),
+              workspaceId,
+              projectId: project.$id,
+              assigneeId: issue?.assignee?.login,
+              position: newPosition + (i + batchIndex) * 1000,
+              number: issue.number,
+            }),
+          ),
+        );
+      }
 
       // Update member's projectId array (keep existing workspace role)
       const currentProjectIds = member.projectId || [];
