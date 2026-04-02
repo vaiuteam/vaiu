@@ -6,8 +6,8 @@ import Footer from "@/components/Footer";
 
 const AuthLayout = ({ children }: PropsWithChildren) => {
   return (
-    <main className="bg-neutral-100 dark:bg-neutral-950 min-h-[100vh]">
-      <div className="mx-auto max-w-screen-2xl p-4">
+    <main className="app-shell min-h-screen">
+      <div className="mx-auto max-w-screen-2xl p-4 md:px-6">
         <nav className="flex items-center justify-between">
           <Navbar />
         </nav>

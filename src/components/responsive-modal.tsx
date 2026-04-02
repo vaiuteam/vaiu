@@ -23,8 +23,8 @@ export const ResponsiveModal = ({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogOverlay className="bg-background/5 backdrop-blur-sm" />
-        <DialogContent className="hide-scrollbar max-h-[85vh] w-full overflow-y-auto border-none p-0 sm:max-w-lg">
+        <DialogOverlay className="bg-slate-950/25 backdrop-blur-md dark:bg-slate-950/55" />
+        <DialogContent className="hide-scrollbar max-h-[85vh] w-full overflow-y-auto border-none bg-background p-0 shadow-none dark:bg-[hsl(var(--surface-elevated))]/95 dark:shadow-[0_28px_65px_-34px_rgba(15,23,42,0.88)] sm:max-w-lg">
           <DialogTitle hidden>{title}</DialogTitle>
           <DialogDescription hidden>Modal dialog content</DialogDescription>
           {children}
@@ -34,7 +34,7 @@ export const ResponsiveModal = ({
   }
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerOverlay className="bg-background/5 backdrop-blur-sm" />
+      <DrawerOverlay className="bg-slate-950/25 backdrop-blur-md dark:bg-slate-950/55" />
       <DrawerContent>
         <div className="hide-scrollbar max-h-[85vh] overflow-y-auto">
           {children}

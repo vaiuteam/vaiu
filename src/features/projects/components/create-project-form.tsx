@@ -129,30 +129,20 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     <Tabs defaultValue="create-new-project" className="w-full px-6 py-8">
       <TabsList className="grid grid-cols-2 gap-2">
         <TabsTrigger
-          className={cn(
-            "h-8 w-full dark:text-gray-100 lg:w-auto",
-            "data-[state=active]:bg-slate-200 data-[state=active]:text-gray-900 data-[state=active]:dark:bg-slate-800",
-            "outline-none data-[state=inactive]:bg-slate-100 data-[state=inactive]:dark:bg-gray-950",
-            "focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:dark:ring-slate-700 focus-visible:dark:ring-offset-slate-900",
-          )}
+          className="h-9 w-full lg:w-auto"
           value="create-new-project"
         >
           Create New Project
         </TabsTrigger>
         <TabsTrigger
-          className={cn(
-            "h-8 w-full dark:text-gray-100 lg:w-auto",
-            "data-[state=active]:bg-slate-200 data-[state=active]:text-gray-900 data-[state=active]:dark:bg-slate-800",
-            "outline-none data-[state=inactive]:bg-slate-100 data-[state=inactive]:dark:bg-gray-950",
-            "focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:dark:ring-slate-700 focus-visible:dark:ring-offset-slate-900",
-          )}
+          className="h-9 w-full lg:w-auto"
           value="add-existing-project"
         >
           Add Existing Project
         </TabsTrigger>
       </TabsList>
       <TabsContent value="create-new-project">
-        <Card className="size-full border-none shadow-none dark:bg-slate-800">
+        <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
           <CardHeader className="flex p-7">
             <CardTitle className="text-xl font-bold">
               Create new project
@@ -162,7 +152,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
             </CardDescription>
           </CardHeader>
           <div className="px-7">
-            <Separator />
+            <Separator className="bg-border/55" />
           </div>
           <CardContent className="p-7">
             <Form {...form1}>
@@ -178,7 +168,6 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                           <Input
                             {...field}
                             placeholder="Enter project name"
-                            className="border border-gray-200 dark:border-gray-400"
                           />
                         </FormControl>
                         <FormMessage />
@@ -205,8 +194,8 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                               />
                             </div>
                           ) : (
-                            <Avatar className="size-[72px]">
-                              <AvatarFallback>
+                              <Avatar className="size-[72px]">
+                              <AvatarFallback className="bg-muted/70">
                                 <ImageIcon className="size-[36px] text-neutral-400" />
                               </AvatarFallback>
                             </Avatar>
@@ -258,7 +247,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                   />
                 </div>
 
-                <Separator className="my-7" />
+                <Separator className="my-7 bg-border/55" />
 
                 <div className="mt-6 flex w-full items-center justify-between gap-4">
                   <Button
@@ -267,14 +256,14 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                     variant="destructive"
                     onClick={onCancel}
                     disabled={isPending}
-                    className={cn(!onCancel && "invisible", "w-1/2")}
+                    className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
                   >
                     Cancel
                   </Button>
                   <Button
                     disabled={isPending}
                     size="lg"
-                    className="w-1/2"
+                    className="w-1/2 rounded-2xl"
                     type="submit"
                   >
                     {isPending ? (
@@ -292,7 +281,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
         </Card>
       </TabsContent>
       <TabsContent value="add-existing-project">
-        <Card className="size-full border-none shadow-none dark:bg-slate-800">
+        <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
           <CardHeader className="flex p-7">
             <CardTitle className="text-xl font-bold">
               Add existing project
@@ -302,7 +291,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
             </CardDescription>
           </CardHeader>
           <div className="px-7">
-            <Separator />
+            <Separator className="bg-border/55" />
           </div>
           <CardContent className="p-7">
             <Form {...form2}>
@@ -323,7 +312,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                             value={field.value ?? ""}
                           >
                             <FormControl>
-                              <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Pick a repository..." />
                               </SelectTrigger>
                             </FormControl>
@@ -365,7 +354,6 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                             <Input
                               {...field}
                               placeholder="Paste your GitHub link here"
-                              className="border border-gray-200 dark:border-gray-400"
                             />
                           </FormControl>
                           <FormMessage />
@@ -395,7 +383,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                               </div>
                             ) : (
                               <Avatar className="size-[72px]">
-                                <AvatarFallback>
+                                <AvatarFallback className="bg-muted/70">
                                   <ImageIcon className="size-[36px] text-neutral-400" />
                                 </AvatarFallback>
                               </Avatar>
@@ -449,7 +437,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                     />
                   </div>
                 </div>
-                <Separator className="my-7" />
+                <Separator className="my-7 bg-border/55" />
                 <div className="mt-6 flex w-full items-center justify-between gap-4">
                   <Button
                     type="button"
@@ -457,14 +445,14 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                     variant="destructive"
                     onClick={onCancel}
                     disabled={isPendingEP}
-                    className={cn(!onCancel && "invisible", "w-1/2")}
+                    className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="lg"
                     disabled={isPendingEP}
-                    className="w-1/2"
+                    className="w-1/2 rounded-2xl"
                     type="submit"
                   >
                     {isPendingEP ? (

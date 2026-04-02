@@ -96,7 +96,7 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
   };
 
   return (
-    <Card className="size-full border-none shadow-none dark:bg-slate-800">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
       <CardHeader className="flex p-5">
         <CardTitle className="text-xl font-bold">Create new Room</CardTitle>
         <CardDescription>
@@ -104,7 +104,7 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
         </CardDescription>
       </CardHeader>
       <div className="px-5">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-5">
         <Form {...form}>
@@ -123,7 +123,6 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
                         {...field}
                         placeholder="Enter room name"
                         disabled={isPending}
-                        className="border border-gray-200 dark:border-gray-400"
                       />
                     </FormControl>
                     <FormMessage />
@@ -145,7 +144,7 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                        <SelectTrigger>
                           <SelectValue
                             className="text-muted-foreground"
                             placeholder="Select a room type"
@@ -185,7 +184,7 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                        <SelectTrigger>
                           <SelectValue
                             className="text-muted-foreground"
                             placeholder="Select a project"
@@ -220,13 +219,13 @@ const CreateChannelForm = ({ onCancel }: CreateRoomFormProps) => {
                 variant="destructive"
                 onClick={onCancel}
                 disabled={isPending}
-                className={cn(!onCancel && "invisible", "w-1/2")}
+                className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
               >
                 Cancel
               </Button>
               <Button
                 disabled={isPending}
-                className="w-1/2"
+                className="w-1/2 rounded-2xl"
                 type="submit"
                 size="lg"
               >

@@ -40,23 +40,25 @@ export const ForgotPasswordCard = () => {
   };
 
   return (
-    <Card className="size-full border-none bg-slate-200 shadow-none dark:bg-zinc-800 md:w-[487px]">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)] md:w-[487px]">
       <CardHeader className="flex flex-col items-center p-7 text-center">
         <Link href="/sign-in" className="items-start self-start">
-          <Button variant='link' size="sm">
+          <Button variant="link" size="sm" className="px-0 text-muted-foreground">
             <motion.div whileHover={{ x: -2 }} whileTap={{ scale: 0.9 }}>
               <ArrowLeft className="h-4 w-4" />
             </motion.div>
             Back to Sign In
           </Button>
         </Link>
-        <CardTitle className="text-2xl">Forgot Password</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-semibold tracking-tight">
+          Forgot Password
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
           Enter your email address and we&apos;ll send you a recovery link
         </CardDescription>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -71,7 +73,6 @@ export const ForgotPasswordCard = () => {
                       {...field}
                       type="email"
                       placeholder="Enter email address"
-                      className="border border-zinc-600"
                     />
                   </FormControl>
                   <FormMessage />
@@ -88,11 +89,6 @@ export const ForgotPasswordCard = () => {
             </Button>
           </form>
         </Form>
-      </CardContent>
-      <div className="px-7">
-        <Separator />
-      </div>
-      <CardContent className="flex items-center justify-center p-7">
       </CardContent>
     </Card >
   );

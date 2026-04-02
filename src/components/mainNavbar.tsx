@@ -44,7 +44,7 @@ export function Navbar({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="mx-auto flex w-full items-center justify-between rounded-full border border-primary/10 bg-secondary/20 px-8 py-4 shadow-lg shadow-neutral-600/5 backdrop-blur-lg md:max-w-4xl">
+      <div className="mx-auto flex w-full items-center justify-between rounded-full bg-background/55 px-8 py-4 shadow-none backdrop-blur-lg dark:shadow-[0_18px_45px_-30px_rgba(15,23,42,0.65)] md:max-w-4xl">
         <Link href="/" className="flex items-center">
           <Logo className="dark:hidden" />
           <Logo2 className="hidden dark:block" />

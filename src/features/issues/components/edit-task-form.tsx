@@ -103,12 +103,12 @@ export const EditTaskForm = ({
   };
 
   return (
-    <Card className="size-full border-none shadow-none">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
       <CardHeader className="flex p-7">
         <CardTitle className="text-xl font-bold">Edit a task</CardTitle>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -163,7 +163,7 @@ export const EditTaskForm = ({
                               : undefined,
                           )
                         }
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                        className="flex h-12 w-full rounded-2xl border border-border/70 bg-background/50 px-3 py-2 text-sm ring-offset-background backdrop-blur-sm dark:border-border dark:bg-background/35"
                       />
                     </FormControl>
                     <FormMessage />
@@ -278,11 +278,11 @@ export const EditTaskForm = ({
                 variant="secondary"
                 onClick={onCancel}
                 disabled={isPending}
-                className={cn(!onCancel && "invisible")}
+                className={cn(!onCancel && "invisible", "rounded-2xl")}
               >
                 Cancel
               </Button>
-              <Button disabled={isPending} type="submit" size="lg">
+              <Button disabled={isPending} type="submit" size="lg" className="rounded-2xl">
                 Save Changes
               </Button>
             </div>

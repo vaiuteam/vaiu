@@ -45,26 +45,28 @@ export const SignUpCard = () => {
     mutate({ json: values });
   };
   return (
-    <Card className="size-full border-none bg-slate-200 shadow-none dark:bg-zinc-800 md:w-[487px]">
-      <CardHeader className="flexx items-center justify-center p-7 text-center">
-        <CardTitle className="text-2xl">Sign Up</CardTitle>
-        <CardDescription className="dark:text-slate-10 text-slate-900 dark:text-slate-200">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)] md:w-[487px]">
+      <CardHeader className="items-center justify-center p-7 text-center">
+        <CardTitle className="text-2xl font-semibold tracking-tight">
+          Sign Up
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
           By signing up, you agree to our{" "}
           <Link href="/privacy">
-            <span className="text-gray-400 underline underline-offset-2">
+            <span className="text-foreground/80 underline underline-offset-2">
               Privacy Policy
             </span>
           </Link>{" "}
           and{" "}
           <Link href="/terms">
-            <span className="text-gray-400 underline underline-offset-2">
+            <span className="text-foreground/80 underline underline-offset-2">
               terms
             </span>
           </Link>
         </CardDescription>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -79,7 +81,6 @@ export const SignUpCard = () => {
                       {...field}
                       type="text"
                       placeholder="Enter your name"
-                      className="border border-zinc-600"
                     />
                   </FormControl>
                   <FormMessage />
@@ -96,7 +97,6 @@ export const SignUpCard = () => {
                       {...field}
                       type="email"
                       placeholder="Enter email address"
-                      className="border border-zinc-600"
                     />
                   </FormControl>
                   <FormMessage />
@@ -114,7 +114,7 @@ export const SignUpCard = () => {
                         {...field}
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className="border border-zinc-600"
+                        className="pr-12"
                       />
                       <Button
                         type="button"
@@ -141,21 +141,21 @@ export const SignUpCard = () => {
           </form>
         </Form>
       </CardContent>
-      <CardContent className="flex-col">
+      <CardContent className="p-7 pt-0">
         <Button
           onClick={() => signUpWithGithub()}
           disabled={isPending}
           variant="secondary"
           size="lg"
-          className="w-full border border-zinc-600"
+          className="w-full rounded-2xl border-transparent bg-background/55"
         >
           <FaGithub className="mr-2 size-5" />
           Continue with Github
         </Button>
-        <motion.p className="text-center text-sm mt-4">
-          already have an account?
+        <motion.p className="mt-4 text-center text-sm text-muted-foreground">
+          Already have an account?
           <Link href="/sign-in">
-            <span className="text-gray-700 underline-offset-2 hover:underline dark:text-gray-400">
+            <span className="text-foreground underline-offset-2 hover:underline">
               &nbsp;Sign In
             </span>
           </Link>

@@ -76,7 +76,7 @@ export const CreateTaskForm = ({
   };
 
   return (
-    <Card className="size-full border-none shadow-none dark:bg-slate-800">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
       <CardHeader className="flex p-5">
         <CardTitle className="text-xl font-bold">Create new issue</CardTitle>
         {/* Keep header descriptions consistent with other forms */}
@@ -85,7 +85,7 @@ export const CreateTaskForm = ({
         </p>
       </CardHeader>
       <div className="px-5">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-5">
         <Form {...form}>
@@ -106,10 +106,10 @@ export const CreateTaskForm = ({
                           type="button"
                           onClick={() => field.onChange(t)}
                           className={cn(
-                            "rounded-lg border px-4 py-3 text-sm font-medium transition-colors",
+                            "rounded-2xl border border-transparent px-4 py-3 text-sm font-medium transition-colors",
                             field.value === t
                               ? "border-primary bg-primary text-primary-foreground"
-                              : "border-slate-200 bg-slate-100 text-muted-foreground hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800",
+                              : "bg-background/55 text-muted-foreground hover:bg-muted/70",
                           )}
                         >
                           {t === "vaiu" ? "Vaiu Issue" : "Github Issue"}
@@ -132,7 +132,6 @@ export const CreateTaskForm = ({
                       <Input
                         {...field}
                         placeholder="Enter issue name"
-                        className="border border-gray-200 dark:border-gray-400"
                       />
                     </FormControl>
                     <FormMessage />
@@ -152,7 +151,6 @@ export const CreateTaskForm = ({
                       <Input
                         {...field}
                         placeholder="Enter Description"
-                        className="border border-gray-200 dark:border-gray-400"
                       />
                     </FormControl>
                     <FormMessage />
@@ -200,7 +198,7 @@ export const CreateTaskForm = ({
                               : undefined,
                           )
                         }
-                        className="flex h-10 w-full rounded-md border border-gray-200 bg-background px-3 py-2 text-sm dark:border-gray-400"
+                        className="flex h-12 w-full rounded-2xl border border-border/70 bg-background/50 px-3 py-2 text-sm backdrop-blur-sm dark:border-border dark:bg-background/35"
                       />
                     </FormControl>
                     <FormMessage />
@@ -220,7 +218,7 @@ export const CreateTaskForm = ({
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                        <SelectTrigger>
                           <SelectValue
                             className="text-muted-foreground"
                             placeholder="Select an assignee"
@@ -258,7 +256,7 @@ export const CreateTaskForm = ({
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                        <SelectTrigger>
                           <SelectValue
                             className="text-muted-foreground"
                             placeholder="Select status"
@@ -293,7 +291,7 @@ export const CreateTaskForm = ({
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border border-gray-200 dark:border-gray-400">
+                        <SelectTrigger>
                           <SelectValue
                             className="text-muted-foreground"
                             placeholder="Select a project"
@@ -320,7 +318,7 @@ export const CreateTaskForm = ({
                 )}
               />
             </div>
-            <Separator className="my-4" />
+            <Separator className="my-4 bg-border/55" />
             <div className="mt-4 flex w-full items-center justify-between gap-4">
               <Button
                 type="button"
@@ -328,14 +326,14 @@ export const CreateTaskForm = ({
                 variant="destructive"
                 onClick={onCancel}
                 disabled={isPending}
-                className={cn(!onCancel && "invisible", "w-1/2")}
+                className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
               >
                 Cancel
               </Button>
               <Button
                 disabled={isPending}
                 type="submit"
-                className="w-1/2"
+                className="w-1/2 rounded-2xl"
                 size="lg"
               >
                 {isPending ? (

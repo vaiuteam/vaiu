@@ -50,13 +50,17 @@ export const ResetPasswordCard = () => {
   };
 
   return (
-    <Card className="size-full border-none bg-slate-200 shadow-none dark:bg-zinc-800 md:w-[487px]">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)] md:w-[487px]">
       <CardHeader className="flex flex-col items-center p-7 text-center">
-        <CardTitle className="text-2xl">Reset Password</CardTitle>
-        <CardDescription>Enter your new password</CardDescription>
+        <CardTitle className="text-2xl font-semibold tracking-tight">
+          Reset Password
+        </CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Enter your new password
+        </CardDescription>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -72,7 +76,7 @@ export const ResetPasswordCard = () => {
                         {...field}
                         type={showPassword ? "text" : "password"}
                         placeholder="New password"
-                        className="border border-zinc-600"
+                        className="pr-12"
                       />
                       <Button
                         type="button"
@@ -104,7 +108,7 @@ export const ResetPasswordCard = () => {
                         {...field}
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="Confirm new password"
-                        className="border border-zinc-600"
+                        className="pr-12"
                       />
                       <Button
                         type="button"

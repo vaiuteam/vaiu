@@ -55,14 +55,14 @@ export const AddCollaboratorToProjectForm = ({
   };
 
   return (
-    <Card className="size-full border-none bg-white shadow-none dark:bg-slate-900">
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
       <CardHeader className="flex p-7">
         <CardTitle className="text-xl font-bold">
           Add New Collaborator
         </CardTitle>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -79,7 +79,6 @@ export const AddCollaboratorToProjectForm = ({
                         {...field}
                         type="text"
                         placeholder="Enter Github username"
-                        className="border border-zinc-600"
                       />
                     </FormControl>
                     <FormMessage />
@@ -94,7 +93,7 @@ export const AddCollaboratorToProjectForm = ({
                 variant="destructive"
                 onClick={onCancel}
                 disabled={isPending}
-                className={cn(!onCancel && "invisible") + "w-1/2"}
+                className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
               >
                 Cancel
               </Button>
@@ -102,7 +101,7 @@ export const AddCollaboratorToProjectForm = ({
                 disabled={isPending}
                 type="submit"
                 size="lg"
-                className="w-1/2 bg-slate-200 text-black hover:bg-slate-300 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+                className="w-1/2 rounded-2xl"
               >
                 Add Collaborator
               </Button>

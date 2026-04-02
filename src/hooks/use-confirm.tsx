@@ -40,23 +40,23 @@ export const useConfirm = (
 
   const ConfirmDialog = () => (
     <ResponsiveModal open={promise !== null} onOpenChange={handleClose}>
-      <Card className="size-full border-none shadow-none">
+      <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
         <CardContent className="pt-8">
           <CardHeader className="p-0">
             <CardTitle>{title}</CardTitle>
             <CardDescription>{message}</CardDescription>
           </CardHeader>
-          <div className="pt-4 w-full flex flex-col gap-y-2 lg:flex-row gap-x-2 items-center justify-end">
+          <div className="flex w-full flex-col items-center justify-end gap-x-2 gap-y-2 pt-4 lg:flex-row">
             <Button
               variant="outline"
-              className="w-full lg:w-auto"
+              className="w-full rounded-2xl lg:w-auto"
               onClick={handleCancel}
             >
               Cancel
             </Button>
             <Button
               variant={variant}
-              className="w-full lg:w-auto"
+              className="w-full rounded-2xl lg:w-auto"
               onClick={handleConfirm}
             >
               Confirm

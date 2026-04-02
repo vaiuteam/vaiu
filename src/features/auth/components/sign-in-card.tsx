@@ -39,12 +39,14 @@ export const SignInCard = () => {
     mutate({ json: values });
   };
   return (
-    <Card className="size-full border-none bg-slate-200 shadow-none dark:bg-zinc-800 md:w-[487px]">
-      <CardHeader className="flexx items-center justify-center p-7 text-center">
-        <CardTitle className="text-2xl">Welcome Back!</CardTitle>
+    <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)] md:w-[487px]">
+      <CardHeader className="items-center justify-center p-7 text-center">
+        <CardTitle className="text-2xl font-semibold tracking-tight">
+          Welcome Back
+        </CardTitle>
       </CardHeader>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
       <CardContent className="p-7">
         <Form {...form}>
@@ -59,7 +61,6 @@ export const SignInCard = () => {
                       {...field}
                       type="email"
                       placeholder="Enter email address"
-                      className="border border-zinc-600"
                     />
                   </FormControl>
                   <FormMessage />
@@ -77,7 +78,7 @@ export const SignInCard = () => {
                         {...field}
                         type={showPassword ? "text" : "password"}
                         placeholder="Enter your password"
-                        className="border border-zinc-600"
+                        className="pr-12"
                       />
                       <Button
                         type="button"
@@ -98,10 +99,10 @@ export const SignInCard = () => {
                   <Button
                     type="button"
                     variant={"link"}
-                    className="-ml-4 text-gray-800 hover:underline"
+                    className="-ml-4 px-0 text-muted-foreground hover:underline"
                   >
                     <Link href="/forgot-password">
-                      <span className="cursor-pointer text-sm text-gray-800 dark:text-gray-400 hover:dark:underline">
+                      <span className="cursor-pointer text-sm hover:underline">
                         Forgot Password?
                       </span>
                     </Link>
@@ -121,23 +122,23 @@ export const SignInCard = () => {
         </Form>
       </CardContent>
       <div className="px-7">
-        <Separator />
+        <Separator className="bg-border/55" />
       </div>
-      <CardContent className="">
+      <CardContent className="p-7 pt-6">
         <Button
           onClick={() => signUpWithGithub()}
           disabled={isPending}
           variant="secondary"
           size="lg"
-          className="w-full border border-zinc-600"
+          className="w-full rounded-2xl border-transparent bg-background/55"
         >
           <FaGithub className="mr-2 size-5" />
           Continue with Github
         </Button>
-        <motion.p className='text-center mt-4 text-sm text-gray-600 dark:text-gray-400'>
+        <motion.p className="mt-4 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?
-          <Link href="/sign-up ">
-            <span className="cursor-pointer text-neutral-950 underline-offset-4 hover:underline dark:text-gray-400">
+          <Link href="/sign-up">
+            <span className="cursor-pointer text-foreground underline-offset-4 hover:underline">
               &nbsp;Signup
             </span>
           </Link>
