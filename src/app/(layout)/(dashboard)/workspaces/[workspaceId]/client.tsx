@@ -9,7 +9,6 @@ import { Analytics } from "@/components/analytics";
 import { Project } from "@/features/projects/types";
 import { PageError } from "@/components/page-error";
 import { Loader } from "@/components/page-loader";
-import { Card, CardContent } from "@/components/ui/card";
 import { useGetIssues } from "@/features/issues/api/use-get-tasks";
 import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
@@ -44,12 +43,12 @@ export const WorkspaceIdClient = () => {
     ?.githubInstallationId;
 
   return (
-    <div className="flex h-full flex-col space-y-4">
+    <div className="flex h-full flex-col space-y-6">
       {!githubConnected && (
-        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950">
+        <div className="flex items-center justify-between rounded-[28px] bg-blue-500/10 px-5 py-4 shadow-none backdrop-blur-sm dark:shadow-[0_20px_50px_-35px_rgba(59,130,246,0.8)]">
           <div className="flex items-center gap-3">
-            <Github className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm text-blue-700 dark:text-blue-300">
+            <Github className="h-5 w-5 text-blue-500" />
+            <span className="text-sm text-blue-700 dark:text-blue-200">
               Connect GitHub to sync repos, issues &amp; PRs automatically
             </span>
           </div>
@@ -61,7 +60,12 @@ export const WorkspaceIdClient = () => {
         </div>
       )}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track what needs attention across your workspace at a glance.
+          </p>
+        </div>
         <Button variant="outline" asChild>
           <Link href={`/workspaces/${workspaceId}/analytics`}>
             View Analytics
@@ -87,35 +91,32 @@ export const TaskList = ({ data, total }: TaskListProps) => {
 
   return (
     <div className="col-span-1 flex flex-col gap-y-4">
-      <div className="rounded-lg border bg-slate-200 p-4 dark:bg-gray-800">
+      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent),hsl(var(--surface))] p-5 shadow-none backdrop-blur-xl dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Issues ({total})</p>
           <Button variant="secondary" size="icon" onClick={createTask}>
-            <PlusIcon className="size-4 text-gray-400" />
+            <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
         </div>
-        <Separator className="my-4 bg-gray-400" />
-        <ul className="flex flex-col gap-y-4">
+        <Separator className="my-4 bg-gradient-to-r from-transparent via-border/70 to-transparent" />
+        <ul className="flex flex-col divide-y divide-border/60">
           {data.map((issue) => (
             <li key={issue.$id}>
               <Link
                 href={`/workspaces/${workspaceId}/projects/${issue.projectId}/tasks/${issue.$id}`}
+                className="block rounded-2xl px-1 py-4 transition hover:bg-background/25"
               >
-                <Card className="rounded-lg bg-slate-50 shadow-none transition hover:opacity-75 dark:bg-gray-900">
-                  <CardContent className="p-4">
-                    <p className="truncate text-lg font-medium">{issue.name}</p>
-                    <div className="flex items-center gap-x-2">
-                      <p>{issue.project?.name}</p>
-                      <div className="dot" />
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <CalendarIcon className="mr-1 size-3" />
-                        <span className="truncate">
-                          {formatDistanceToNow(new Date(issue.dueDate))}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <p className="truncate text-lg font-medium">{issue.name}</p>
+                <div className="flex items-center gap-x-2">
+                  <p>{issue.project?.name}</p>
+                  <div className="dot" />
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CalendarIcon className="mr-1 size-3" />
+                    <span className="truncate">
+                      {formatDistanceToNow(new Date(issue.dueDate))}
+                    </span>
+                  </div>
+                </div>
               </Link>
             </li>
           ))}
@@ -125,7 +126,7 @@ export const TaskList = ({ data, total }: TaskListProps) => {
         </ul>
         <Button
           variant="outline"
-          className="mt-4 w-full bg-slate-100 transition-all duration-300 ease-in-out dark:bg-gray-900"
+          className="mt-4 w-full rounded-2xl bg-background/50 transition-all duration-300 ease-in-out hover:bg-accent"
           asChild
         >
           <Link href={`/workspaces/${workspaceId}/tasks`}>Show All</Link>
@@ -145,31 +146,30 @@ export const ProjectList = ({ data, total }: ProjectListProps) => {
 
   return (
     <div className="col-span-1 flex flex-col gap-y-4">
-      <div className="rounded-lg border bg-slate-200 p-4 dark:bg-gray-800">
+      <div className="rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent),hsl(var(--surface))] p-5 shadow-none backdrop-blur-xl dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Projects ({total})</p>
           <Button variant="secondary" size="icon" onClick={createProject}>
-            <PlusIcon className="size-4 text-neutral-400" />
+            <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
         </div>
-        <Separator className="my-4 bg-gray-400" />
-        <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Separator className="my-4 bg-gradient-to-r from-transparent via-border/70 to-transparent" />
+        <ul className="grid grid-cols-1 gap-x-6 gap-y-0 lg:grid-cols-2">
           {data.map((project) => (
-            <li key={project.$id}>
-              <Link href={`/workspaces/${workspaceId}/projects/${project.$id}`}>
-                <Card className="rounded-lg border border-gray-200 bg-slate-50 shadow-none transition hover:opacity-75 dark:border-gray-700 dark:bg-gray-900">
-                  <CardContent className="flex items-center gap-x-2.5 p-4">
-                    <ProjectAvatar
-                      className="size-12"
-                      fallbackClassName="text-lg"
-                      name={project.name}
-                      image={project.imageUrl}
-                    />
-                    <p className="truncate text-lg font-medium">
-                      {project.name}
-                    </p>
-                  </CardContent>
-                </Card>
+            <li key={project.$id} className="border-b border-border/60 py-4">
+              <Link
+                href={`/workspaces/${workspaceId}/projects/${project.$id}`}
+                className="flex items-center gap-x-2.5 rounded-2xl px-1 py-1 transition hover:bg-background/25"
+              >
+                <ProjectAvatar
+                  className="size-12"
+                  fallbackClassName="text-lg"
+                  name={project.name}
+                  image={project.imageUrl}
+                />
+                <p className="truncate text-lg font-medium">
+                  {project.name}
+                </p>
               </Link>
             </li>
           ))}

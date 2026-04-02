@@ -211,7 +211,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-sidebar/92 p-0 text-sidebar-foreground backdrop-blur-xl [&>button]:hidden"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -265,7 +265,7 @@ const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-[28px] group-data-[variant=floating]:bg-sidebar/92 group-data-[variant=floating]:shadow-none group-data-[variant=floating]:backdrop-blur-xl dark:group-data-[variant=floating]:shadow-[0_28px_60px_-32px_rgba(15,23,42,0.85)]"
           >
             {children}
           </div>
@@ -288,7 +288,10 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-12 w-12", className)}
+      className={cn(
+        "h-12 w-12 rounded-2xl bg-sidebar/60 shadow-none hover:bg-sidebar-accent/80 dark:shadow-sm",
+        className,
+      )}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -456,7 +459,7 @@ const SidebarGroupLabel = React.forwardRef<
       ref={ref}
       data-sidebar="group-label"
       className={cn(
-        "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "flex h-8 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/55 outline-none ring-sidebar-ring transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}

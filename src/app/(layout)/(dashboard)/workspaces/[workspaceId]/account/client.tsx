@@ -15,11 +15,11 @@ export const UserSettingsClient = () => {
 
   return (
     <div className="w-full lg:max-w-4xl">
-      <div className="flex flex-col gap-y-4">
+      <div className="flex flex-col gap-y-5 rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface))] p-5 shadow-none backdrop-blur-xl dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <Button
           variant="ghost"
           onClick={handleBack}
-          className="w-fit flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2"
+          className="flex w-fit items-center gap-2 rounded-2xl px-2 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back

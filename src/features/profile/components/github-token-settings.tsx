@@ -55,7 +55,7 @@ export const GithubTokenSettings = () => {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
@@ -64,7 +64,7 @@ export const GithubTokenSettings = () => {
   }
 
   return (
-    <Card>
+    <Card className="border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Github className="h-5 w-5" />
@@ -109,7 +109,7 @@ export const GithubTokenSettings = () => {
             </div>
             <Dialog>
               <DialogTrigger asChild>
-                <button className="text-sm text-blue-400 underline">
+                <button className="text-sm text-blue-500 underline underline-offset-4">
                   Steps to generate personal access token
                 </button>
               </DialogTrigger>
@@ -230,7 +230,7 @@ export const GithubTokenSettings = () => {
           </div>
         </div>
 
-        <div className="text-xs p-3 bg-blue-50 dark:bg-blue-950 rounded-md text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+        <div className="rounded-2xl bg-blue-500/10 p-3 text-xs text-blue-700 dark:text-blue-200">
           <strong>Tip:</strong> For better security, connect GitHub at the workspace
           level via <strong>Workspace Settings → Connect GitHub</strong>. The GitHub App
           integration automatically manages tokens and is required for real-time webhook sync.

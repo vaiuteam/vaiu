@@ -6,13 +6,13 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
   if (!data) {
     return (
       <div className="flex h-full w-full items-center justify-center">
-        <p className="text-gray-500">No analytics data available</p>
+        <p className="text-muted-foreground">No analytics data available</p>
       </div>
     );
   }
   return (
-    <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg">
-      <div className="flex w-full flex-row space-x-4">
+    <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-3xl">
+      <div className="flex w-full flex-row space-x-4 pb-1">
         <div className="flex flex-1 items-center">
           <AnalyticsCard
             title="Total Issues"

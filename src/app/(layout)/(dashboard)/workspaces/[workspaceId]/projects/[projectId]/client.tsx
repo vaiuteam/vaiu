@@ -156,31 +156,36 @@ export const ProjectIdClient = () => {
   if (!project) return <PageError message="Project not found" />;
 
   return (
-    <div className="flex flex-col gap-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-x-2">
+    <div className="flex flex-col gap-y-6">
+      <div className="flex flex-col justify-between gap-4 rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent),hsl(var(--surface))] p-5 shadow-none backdrop-blur-xl dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)] md:flex-row md:items-center">
+        <div className="flex items-center gap-x-3">
           <ProjectAvatar
             name={project.name}
             image={project.imageUrl}
-            className="size-8"
+            className="size-10"
           />
-          <p className="text-lg font-semibold capitalize">{project.name}</p>
+          <div>
+            <p className="text-xl font-semibold capitalize">{project.name}</p>
+            <p className="text-sm text-muted-foreground">
+              Issues, pull requests, docs, and collaboration in one place.
+            </p>
+          </div>
           <Link
             href={`https://github.com/${project.owner}/${project.name}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-1 text-gray-500"
+            className="ml-1 text-muted-foreground transition hover:text-foreground"
             title="View on GitHub"
           >
             <FaGithub className="size-5" />
           </Link>
         </div>
 
-        <div className="mt-2 flex">
+        <div className="flex items-center gap-2">
           <MembersList data={members?.documents || []} />
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="ml-2" asChild>
-              <Button variant="outline" size="default" className="items-center">
+              <Button variant="outline" size="default" className="items-center rounded-2xl border-transparent bg-background/45">
                 <p className="text-sm">Actions</p>
                 <EllipsisVertical className="size-4" />
                 <span className="sr-only">Open menu</span>
@@ -230,16 +235,16 @@ export const ProjectIdClient = () => {
       {analytics && <Analytics data={analytics} />}
 
       <Tabs defaultValue="issues" className="w-full">
-        <TabsList className="h-8 w-full overflow-hidden rounded-md border border-gray-200 bg-transparent p-0 dark:border-gray-400 lg:w-auto">
+        <TabsList className="h-11 w-full overflow-hidden rounded-2xl bg-background/45 p-1 backdrop-blur-sm lg:w-auto">
           <TabsTrigger
             value="issues"
-            className="h-8 w-full rounded-none bg-transparent px-3 text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/15 data-[state=active]:bg-slate-200 data-[state=active]:text-[#1e1e1e] dark:bg-transparent dark:text-gray-200 dark:focus-visible:outline-white/20 dark:data-[state=active]:bg-slate-200 dark:data-[state=active]:text-[#1e1e1e] lg:w-auto"
+            className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
           >
             Issues
           </TabsTrigger>
           <TabsTrigger
             value="pull-requests"
-            className="h-8 w-full rounded-none bg-transparent px-3 text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/15 data-[state=active]:bg-slate-200 data-[state=active]:text-[#1e1e1e] dark:bg-transparent dark:text-gray-200 dark:focus-visible:outline-white/20 dark:data-[state=active]:bg-slate-200 dark:data-[state=active]:text-[#1e1e1e] lg:w-auto"
+            className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
           >
             Pull Requests
           </TabsTrigger>
@@ -258,8 +263,8 @@ export const ProjectIdClient = () => {
           <Loader />
         </div>
       ) : readmeContent ? (
-        <Card className="mt-4">
-          <CardHeader className="flex flex-row items-center justify-between border-b">
+        <Card className="mt-2 overflow-hidden border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
+          <CardHeader className="flex flex-row items-center justify-between bg-background/10">
             <CardTitle>README</CardTitle>
             {/* Update the README copy button */}
             <Button
@@ -318,7 +323,7 @@ export const ProjectIdClient = () => {
                   ),
                   blockquote: ({ ...props }) => (
                     <blockquote
-                      className="my-3 border-l-4 border-gray-300 py-1 pl-4 font-sans italic dark:border-gray-700"
+                      className="my-3 border-l-2 border-border/50 py-1 pl-4 font-sans italic"
                       {...props}
                     />
                   ),
@@ -338,14 +343,14 @@ export const ProjectIdClient = () => {
 
                     return inline ? (
                       <code
-                        className="max-w-7xl rounded bg-gray-100 px-1 py-0.5 font-mono text-sm dark:bg-gray-800"
+                        className="max-w-7xl rounded-md bg-muted/80 px-1.5 py-0.5 font-mono text-sm"
                         {...props}
                       >
                         {children}
                       </code>
                     ) : (
-                      <div className="relative my-3 max-w-4xl overflow-hidden rounded-md">
-                        <div className="flex items-center justify-between bg-gray-200 px-3 py-1 text-xs font-semibold dark:bg-gray-700">
+                      <div className="relative my-3 max-w-4xl overflow-hidden rounded-xl bg-muted/45 shadow-none dark:shadow-sm">
+                        <div className="flex items-center justify-between bg-muted/70 px-3 py-1.5 text-xs font-semibold">
                           <span>
                             {match && match[1]
                               ? match[1].toUpperCase()
@@ -358,7 +363,7 @@ export const ProjectIdClient = () => {
                               e.stopPropagation();
                               handleCopyText(codeText, e);
                             }}
-                            className="text-gray-500 hover:text-gray-700 focus:outline-none dark:text-gray-400 dark:hover:text-gray-300"
+                            className="text-muted-foreground transition hover:text-foreground focus:outline-none"
                             aria-label="Copy code"
                           >
                             {copiedText === codeText ? (
@@ -368,7 +373,7 @@ export const ProjectIdClient = () => {
                             )}
                           </button>
                         </div>
-                        <pre className="m-0 overflow-x-auto bg-gray-100 p-3 dark:bg-gray-800">
+                        <pre className="m-0 overflow-x-auto bg-background/60 p-3">
                           <code
                             className={`language-${match ? match[1] : ""} font-mono text-sm`}
                             {...props}
@@ -382,7 +387,7 @@ export const ProjectIdClient = () => {
                   pre: ({ children }) => <>{children}</>,
                   a: ({ href, ...props }) => (
                     <a
-                      className="font-sans text-blue-600 hover:underline dark:text-blue-400"
+                      className="font-sans text-blue-500 hover:underline"
                       href={href}
                       target={href?.startsWith("http") ? "_blank" : undefined}
                       rel={
@@ -413,20 +418,20 @@ export const ProjectIdClient = () => {
                   table: ({ ...props }) => (
                     <div className="my-3 overflow-x-auto">
                       <table
-                        className="min-w-full divide-y divide-gray-200 font-sans dark:divide-gray-700"
+                        className="min-w-full divide-y divide-border font-sans"
                         {...props}
                       />
                     </div>
                   ),
                   thead: ({ ...props }) => (
                     <thead
-                      className="bg-gray-50 font-sans dark:bg-gray-800"
+                      className="bg-muted/70 font-sans"
                       {...props}
                     />
                   ),
                   th: ({ ...props }) => (
                     <th
-                      className="px-4 py-3 text-left font-sans text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                      className="px-4 py-3 text-left font-sans text-xs font-medium uppercase tracking-wider text-muted-foreground"
                       {...props}
                     />
                   ),
@@ -442,7 +447,7 @@ export const ProjectIdClient = () => {
           </CardContent>
         </Card>
       ) : (
-        <Card className="mt-4 p-6 text-center">
+        <Card className="mt-2 border-none bg-card/70 p-6 text-center shadow-none">
           <p className="font-sans text-muted-foreground">
             No README file found. Upload one to display project information.
           </p>
@@ -466,7 +471,7 @@ interface MembersListProps {
 }
 export const MembersList = ({ data }: MembersListProps) => {
   return (
-    <div className="container col-span-1 flex flex-col gap-y-4">
+    <div className="col-span-1 flex flex-col gap-y-4">
       <ul className="flex -space-x-2">
         {data && data.length > 0 ? (
           <>

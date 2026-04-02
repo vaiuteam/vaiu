@@ -15,11 +15,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full pb-8">
+      <div className="app-shell flex min-h-screen w-full pb-8">
         {!hideSidebar && <SidebarComponent />}
         <main className="flex-1 overflow-auto">
-          {children}
-          <div className="mt-12ßß">
+          <div className="px-3 pt-3 md:px-5 md:pt-5">
+            {children}
+          </div>
+          <div className="mt-12 px-3 md:px-5">
             <Footer />
           </div>
         </main>

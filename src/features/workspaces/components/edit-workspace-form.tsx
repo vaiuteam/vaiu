@@ -115,7 +115,7 @@ export const EditWorkspaceForm = ({
     <div className="flex flex-col gap-y-4">
       <DeleteWorkspaceDialog />
       <ResetDialog />
-      <Card className="size-full border-none shadow-none">
+      <Card className="size-full border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <CardHeader className="flex flex-row items-center gap-x-4 space-y-0">
           <Button
             variant="secondary"
@@ -238,7 +238,7 @@ export const EditWorkspaceForm = ({
           </Form>
         </CardContent>
       </Card>
-      <Card className="size-full border-none shadow-none">
+      <Card className="size-full border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <CardContent className="p-7">
           <div className="flex flex-col">
             <h3 className="font-bold">Invite Members</h3>
@@ -275,7 +275,7 @@ export const EditWorkspaceForm = ({
           </div>
         </CardContent>
       </Card>
-      <Card className="size-full border-none shadow-none">
+      <Card className="size-full border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
         <CardContent className="">
           <div className="flex flex-col">
             <h3 className="font-bold">Delete Workspace</h3>

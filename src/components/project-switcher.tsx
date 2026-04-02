@@ -37,9 +37,9 @@ export const ProjectSwitcher = () => {
 
   const currentProject =
     projects &&
-    typeof projects === "object" &&
-    "documents" in projects &&
-    Array.isArray(projects.documents)
+      typeof projects === "object" &&
+      "documents" in projects &&
+      Array.isArray(projects.documents)
       ? projects.documents.find((p: Project) => p.$id === projectId)
       : null;
 
@@ -77,7 +77,7 @@ export const ProjectSwitcher = () => {
   return (
     <div className="flex flex-col gap-y-2">
       <Select onValueChange={onSelect} value={projectId}>
-        <SelectTrigger className="w-full bg-slate-100 p-1 pl-3 font-medium dark:bg-slate-800">
+        <SelectTrigger className="h-11 w-full rounded-2xl border-transparent bg-background/45 p-1 pl-3 font-medium shadow-sm backdrop-blur-sm">
           <SelectValue placeholder="Select a project" className="font-bold" />
         </SelectTrigger>
         <SelectContent position="popper" className="">
@@ -88,8 +88,8 @@ export const ProjectSwitcher = () => {
             projects.documents.map((project: Project) => (
               <SelectItem
                 className={cn(
-                  "m-0.5 hover:bg-slate-200 dark:hover:bg-slate-600",
-                  projectId === project.$id && "bg-slate-100 dark:bg-slate-500",
+                  "m-0.5 rounded-xl py-2 hover:bg-accent",
+                  projectId === project.$id && "bg-accent",
                 )}
                 value={project.$id}
                 key={project.$id}
@@ -101,9 +101,9 @@ export const ProjectSwitcher = () => {
               </SelectItem>
             ))
           ) : (
-              <div className="flex pl-3 pb-2 font-sm">
-                No projects
-              </div>
+            <div className="flex pl-3 pb-2 font-sm">
+              No projects
+            </div>
           )}
         </SelectContent>
       </Select>

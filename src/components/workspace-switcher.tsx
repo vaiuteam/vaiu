@@ -67,12 +67,16 @@ export const WorkspaceSwitcher = () => {
   return (
     <div className="flex flex-col gap-y-2">
       <Select onValueChange={onSelect} value={workspaceId}>
-        <SelectTrigger className="w-full bg-slate-100 p-1 font-medium dark:bg-slate-800">
+        <SelectTrigger className="h-11 w-full rounded-2xl border-transparent bg-background/45 p-1 font-medium shadow-sm backdrop-blur-sm">
           <SelectValue placeholder="No workspace selected" />
         </SelectTrigger>
         <SelectContent className="">
           {wokspaces?.documents.map((workspace) => (
-            <SelectItem value={workspace.$id} key={workspace.$id}>
+            <SelectItem
+              value={workspace.$id}
+              key={workspace.$id}
+              className="rounded-xl py-2"
+            >
               <div className="flex items-center justify-start gap-3 font-medium">
                 <WorkspaceAvatar
                   name={workspace.name}

@@ -66,9 +66,9 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                          "h-12 w-12",
+                          "h-12 w-12 rounded-2xl",
                           currentRoomId === room.$id &&
-                            "bg-slate-200 dark:bg-slate-700",
+                          "bg-sidebar-accent text-sidebar-accent-foreground",
                         )}
                         onClick={() => handleJoinRoom(room.$id, "VIDEO")}
                       >
@@ -88,9 +88,9 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
                         variant="ghost"
                         size="icon"
                         className={cn(
-                          "h-12 w-12",
+                          "h-12 w-12 rounded-2xl",
                           currentRoomId === room.$id &&
-                            "bg-slate-200 dark:bg-slate-700",
+                          "bg-sidebar-accent text-sidebar-accent-foreground",
                         )}
                         onClick={() => handleJoinRoom(room.$id, "AUDIO")}
                       >
@@ -120,7 +120,7 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
         <ScrollArea className="h-[200px] pr-2">
           {videoRooms && videoRooms.length > 0 && (
             <div className="mb-2 space-y-1">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-sidebar-foreground/55">
                 Video Rooms
               </p>
               {videoRooms.map((room) => (
@@ -128,9 +128,9 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
                   key={room.$id}
                   variant="ghost"
                   className={cn(
-                    "h-8 w-full justify-start px-2 text-sm",
+                    "h-9 w-full justify-start rounded-xl px-2.5 text-sm",
                     currentRoomId === room.$id &&
-                      "bg-slate-100 dark:bg-slate-800",
+                    "bg-sidebar-accent text-sidebar-accent-foreground",
                   )}
                   onClick={() => handleJoinRoom(room.$id, "VIDEO")}
                 >
@@ -143,7 +143,7 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
 
           {audioRooms && audioRooms.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-sidebar-foreground/55">
                 Audio Rooms
               </p>
               {audioRooms.map((room) => (
@@ -151,9 +151,9 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
                   key={room.$id}
                   variant="ghost"
                   className={cn(
-                    "h-8 w-full justify-start px-2 text-sm",
+                    "h-9 w-full justify-start rounded-xl px-2.5 text-sm",
                     currentRoomId === room.$id &&
-                      "bg-slate-100 dark:bg-slate-800",
+                    "bg-sidebar-accent text-sidebar-accent-foreground",
                   )}
                   onClick={() => handleJoinRoom(room.$id, "AUDIO")}
                 >
@@ -167,7 +167,7 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
           {(!audioRooms || audioRooms.length === 0) &&
             (!videoRooms || videoRooms.length === 0) && (
               <div className="py-4 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   No rooms available
                 </p>
                 <Button

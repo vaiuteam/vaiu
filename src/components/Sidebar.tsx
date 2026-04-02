@@ -25,6 +25,7 @@ import { RoomSwitcher } from "./room-switcher";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { useMemo, useCallback } from "react";
 import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -100,7 +101,12 @@ const SidebarSection = ({
 }: SidebarSectionProps) => {
   if (isCollapsed) {
     return (
-      <SidebarGroup className={className}>
+      <SidebarGroup
+        className={cn(
+          "rounded-2xl bg-sidebar/55 px-1.5 py-2 shadow-none backdrop-blur-xl dark:shadow-sm",
+          className,
+        )}
+      >
         <SidebarGroupContent className="flex flex-col items-center gap-2">
           {children}
         </SidebarGroupContent>
@@ -109,10 +115,15 @@ const SidebarSection = ({
   }
 
   return (
-    <SidebarGroup className={className}>
+    <SidebarGroup
+      className={cn(
+        "rounded-2xl bg-sidebar/55 px-1.5 py-2 shadow-none backdrop-blur-xl dark:shadow-sm",
+        className,
+      )}
+    >
       <SidebarGroupLabel>
         <div className="flex w-full items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/55">
             {title}
           </span>
           {onAdd && addLabel && (
@@ -158,9 +169,9 @@ export const SidebarComponent = () => {
 
   return (
     <Sidebar collapsible="icon" side="left" variant="floating">
-      <SidebarContent className="flex flex-col gap-2 p-3">
+      <SidebarContent className="flex flex-col gap-4 p-3">
         {/* Logo Header */}
-        <SidebarGroup className="">
+        <SidebarGroup className="rounded-2xl bg-sidebar/55 px-1.5 py-2 shadow-none backdrop-blur-xl dark:shadow-sm">
           <SidebarHeader className="gap-0 p-0">
             {isCollapsed ? (
               <div className="group/logo relative flex items-center justify-center">
@@ -246,7 +257,7 @@ export const SidebarComponent = () => {
               <RoomSwitcher workspaceId={workspaceId} projectId={projectId} />
             ) : (
               !isCollapsed && (
-                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-muted-foreground/25 px-3 py-4">
+                <div className="flex h-full items-center justify-center rounded-lg bg-background/25 px-3 py-4">
                   <p className="text-center text-xs text-muted-foreground">
                     Select a project to view rooms
                   </p>

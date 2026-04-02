@@ -5,7 +5,6 @@ import { UserButton } from "@/features/auth/components/user-button";
 
 // import { MobileSidebar } from "./mobile-sidebar";
 import { ModeToggle } from "./ui/ModeToggle";
-import { SidebarComponent } from "./Sidebar";
 import { SidebarTrigger } from "./ui/sidebar";
 
 // import { NotificationBell } from "@/features/notifications/components/notification-bell";
@@ -31,15 +30,16 @@ export const Navbar = () => {
 
   const { description, title } = pathnameMap[pathnameKey] || defaultMap;
   return (
-    <nav className="flex items-center justify-between p-4">
+    <nav className="sticky top-3 z-20 mb-6 flex items-center justify-between rounded-[28px] bg-background/55 px-4 py-3 shadow-none backdrop-blur-xl dark:shadow-[0_22px_50px_-30px_rgba(15,23,42,0.75)]">
       <div className="flex items-center gap-x-4">
-        <SidebarTrigger className="block md:hidden" />
-        <div className="hidden flex-col lg:flex">
-          <h1 className="text-2xl font-bold">{title}</h1>
-          <p className="text-muted-foreground">{description}</p>
+        <SidebarTrigger className="h-11 w-11 rounded-2xl bg-card/55 hover:bg-accent md:hidden" />
+        <div className="flex flex-col">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
+          <p className="hidden text-sm text-muted-foreground md:block">
+            {description}
+          </p>
         </div>
       </div>
-      <SidebarComponent />
       <div className="flex items-center justify-center gap-x-4">
         {/* <NotificationBell /> */}
         <UserButton />

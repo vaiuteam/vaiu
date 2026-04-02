@@ -141,10 +141,10 @@ export const Navigation = () => {
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        "h-12 w-12",
+                        "h-12 w-12 rounded-2xl",
                         isActive
-                          ? "bg-slate-200 text-primary hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-primary dark:text-slate-200 hover:dark:bg-slate-700/50",
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm hover:bg-sidebar-accent"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
                       )}
                       asChild
                     >
@@ -216,10 +216,10 @@ export const Navigation = () => {
             <Link
               href={resolvedHref}
               className={cn(
-                "m-0.5 flex items-center gap-2.5 rounded-md p-2.5 font-medium transition",
+                "m-0.5 flex items-center gap-2.5 rounded-2xl px-3 py-2.5 font-medium transition",
                 isActive
-                  ? "bg-slate-200 text-primary hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-primary dark:text-slate-200 hover:dark:bg-slate-700/50",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm hover:bg-sidebar-accent"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
               )}
             >
               <Icon className="size-5" />
