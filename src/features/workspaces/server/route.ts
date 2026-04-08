@@ -29,57 +29,60 @@ import { deleteInstallation } from "@/lib/github-app";
 import { endOfMonth, startOfMonth, subMonths } from "date-fns";
 import { IssueStatus } from "@/features/issues/types";
 import { Project } from "@/features/projects/types";
+import { cacheRemember, invalidateCacheGroups } from "@/lib/redis-cache";
 
 const app = new Hono()
   .get("/", sessionMiddleware, async (c) => {
     const user = c.get("user");
     const databases = c.get("databases");
+    const cachedData = await cacheRemember(
+      `cache:workspaces:list:user:${user.$id}`,
+      45,
+      async () => {
+        const isSuper = await isSuperAdmin({ databases, userId: user.$id });
 
-    // Check if user is a super admin
-    const isSuper = await isSuperAdmin({ databases, userId: user.$id });
+        if (isSuper) {
+          const workspaces = await databases.listDocuments<Workspace>(
+            DATABASE_ID,
+            WORKSPACE_ID,
+            [Query.orderDesc("$createdAt")],
+          );
+          return {
+            total: workspaces.total,
+            documents: workspaces.documents.map((w) => ({
+              $id: w.$id,
+              $createdAt: w.$createdAt,
+              $updatedAt: w.$updatedAt,
+              name: w.name,
+              imageUrl: w.imageUrl,
+              inviteCode: w.inviteCode,
+              userId: w.userId,
+              type: w.type,
+              githubInstallationId: w.githubInstallationId,
+              githubAccountLogin: w.githubAccountLogin,
+              githubAccountType: w.githubAccountType,
+            })),
+          };
+        }
 
-    if (isSuper) {
-      // Super admins can see all workspaces
-      const workspaces = await databases.listDocuments<Workspace>(
-        DATABASE_ID,
-        WORKSPACE_ID,
-        [Query.orderDesc("$createdAt")],
-      );
-      return c.json({
-        data: {
-          total: workspaces.total,
-          documents: workspaces.documents.map((w) => ({
-            $id: w.$id,
-            $createdAt: w.$createdAt,
-            $updatedAt: w.$updatedAt,
-            name: w.name,
-            imageUrl: w.imageUrl,
-            inviteCode: w.inviteCode,
-            userId: w.userId,
-            type: w.type,
-            githubInstallationId: w.githubInstallationId,
-            githubAccountLogin: w.githubAccountLogin,
-            githubAccountType: w.githubAccountType,
-          })),
-        },
-      });
-    }
+        const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
+          Query.equal("userId", user.$id),
+        ]);
 
-    // Regular users can only see workspaces they're members of
-    const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
-      Query.equal("userId", user.$id),
-    ]);
+        if (members.total === 0) {
+          return { documents: [], total: 0 };
+        }
 
-    if (members.total == 0) {
-      return c.json({ data: { documents: [], total: 0 } });
-    }
-    const workspaceIds = members.documents.map((member) => member.workspaceId);
-    const workspaces = await databases.listDocuments<Workspace>(
-      DATABASE_ID,
-      WORKSPACE_ID,
-      [Query.orderDesc("$createdAt"), Query.contains("$id", workspaceIds)],
+        const workspaceIds = members.documents.map((member) => member.workspaceId);
+        return databases.listDocuments<Workspace>(DATABASE_ID, WORKSPACE_ID, [
+          Query.orderDesc("$createdAt"),
+          Query.contains("$id", workspaceIds),
+        ]);
+      },
+      [`user:${user.$id}`],
     );
-    return c.json({ data: workspaces });
+
+    return c.json({ data: cachedData });
   })
   .get("/:workspaceId", sessionMiddleware, async (c) => {
     const user = c.get("user");
@@ -103,10 +106,16 @@ const app = new Hono()
         }
       }
 
-      const workspace = await databases.getDocument<Workspace>(
-        DATABASE_ID,
-        WORKSPACE_ID,
-        workspaceId,
+      const workspace = await cacheRemember(
+        `cache:workspaces:detail:${workspaceId}`,
+        45,
+        () =>
+          databases.getDocument<Workspace>(
+            DATABASE_ID,
+            WORKSPACE_ID,
+            workspaceId,
+          ),
+        [`workspace:${workspaceId}`],
       );
 
       return c.json({ data: workspace });
@@ -140,10 +149,16 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      const workspace = await databases.getDocument<Workspace>(
-        DATABASE_ID,
-        WORKSPACE_ID,
-        workspaceId,
+      const workspace = await cacheRemember(
+        `cache:workspaces:info:${workspaceId}`,
+        45,
+        () =>
+          databases.getDocument<Workspace>(
+            DATABASE_ID,
+            WORKSPACE_ID,
+            workspaceId,
+          ),
+        [`workspace:${workspaceId}`],
       );
 
       return c.json({
@@ -172,10 +187,16 @@ const app = new Hono()
     const { workspaceId } = c.req.param();
 
     try {
-      const workspace = await databases.getDocument<Workspace>(
-        DATABASE_ID,
-        WORKSPACE_ID,
-        workspaceId,
+      const workspace = await cacheRemember(
+        `cache:workspaces:join:${workspaceId}`,
+        45,
+        () =>
+          databases.getDocument<Workspace>(
+            DATABASE_ID,
+            WORKSPACE_ID,
+            workspaceId,
+          ),
+        [`workspace:${workspaceId}`],
       );
 
       // Return only public information (no invite code)
@@ -259,6 +280,7 @@ const app = new Hono()
             projectId: [],
             role: MemberRole.ADMIN,
           });
+          await invalidateCacheGroups(`user:${user.$id}`, `workspace:${workspace.$id}`);
           return c.json({
             data: {
               $id: workspace.$id,
@@ -327,6 +349,7 @@ const app = new Hono()
           imageUrl: uploadedImage,
         },
       );
+      await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
 
       return c.json({
         data: {
@@ -429,6 +452,7 @@ const app = new Hono()
     }
 
     await databases.deleteDocument(DATABASE_ID, WORKSPACE_ID, workspaceId);
+    await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
     return c.json({ data: { $id: workspaceId } });
   })
   .post("/:workspaceId/reset-invite-code", sessionMiddleware, async (c) => {
@@ -451,6 +475,7 @@ const app = new Hono()
         inviteCode: generateInviteCode(INVITECODE_LENGTH),
       },
     );
+    await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
     return c.json({ data: workspace });
   })
   .get("/:workspaceId/analytics", sessionMiddleware, async (c) => {
@@ -862,6 +887,7 @@ const app = new Hono()
       githubAccountLogin: null,
       githubAccountType: null,
     });
+    await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
 
     return c.json({ data: { $id: workspaceId } });
   })
@@ -905,6 +931,7 @@ const app = new Hono()
         userId: user.$id,
         role: MemberRole.MEMBER,
       });
+      await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
 
       return c.json({
         data: {

@@ -36,6 +36,7 @@ import {
 } from "@/lib/github-api";
 import { listInstallationRepos } from "@/lib/github-app";
 import { WORKSPACE_ID } from "@/config";
+import { cacheRemember, invalidateCacheGroups } from "@/lib/redis-cache";
 
 const extractRepoName = (githubUrl: string): string => {
   // Split by '/' and get the last segment
@@ -133,6 +134,7 @@ const app = new Hono()
         await databases.updateDocument(DATABASE_ID, MEMBERS_ID, member.$id, {
           projectId: [...currentProjectIds, project.$id],
         });
+        await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
 
         return c.json({ data: project, repo });
       }
@@ -274,6 +276,7 @@ const app = new Hono()
       await databases.updateDocument(DATABASE_ID, MEMBERS_ID, member.$id, {
         projectId: [...currentProjectIds, project.$id],
       });
+      await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
 
       return c.json({ data: project, issues: data });
     },
@@ -341,14 +344,15 @@ const app = new Hono()
         const isSuper = await isSuperAdmin({ databases, userId: user.$id });
 
         if (isSuper) {
-          // Super admins can see all projects
-          const projects = await databases.listDocuments<Project>(
-            DATABASE_ID,
-            PROJECTS_ID,
-            [
-              Query.equal("workspaceId", workspaceId),
-              Query.orderDesc("$createdAt"),
-            ],
+          const projects = await cacheRemember(
+            `cache:projects:list:workspace:${workspaceId}:user:${user.$id}`,
+            45,
+            () =>
+              databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+                Query.equal("workspaceId", workspaceId),
+                Query.orderDesc("$createdAt"),
+              ]),
+            [`workspace:${workspaceId}`, `user:${user.$id}`],
           );
           return c.json({ data: projects });
         }
@@ -365,13 +369,15 @@ const app = new Hono()
 
         // Workspace admins can see all projects in the workspace
         if (member.role === MemberRole.ADMIN) {
-          const projects = await databases.listDocuments<Project>(
-            DATABASE_ID,
-            PROJECTS_ID,
-            [
-              Query.equal("workspaceId", workspaceId),
-              Query.orderDesc("$createdAt"),
-            ],
+          const projects = await cacheRemember(
+            `cache:projects:list:workspace:${workspaceId}:user:${user.$id}`,
+            45,
+            () =>
+              databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+                Query.equal("workspaceId", workspaceId),
+                Query.orderDesc("$createdAt"),
+              ]),
+            [`workspace:${workspaceId}`, `user:${user.$id}`],
           );
           return c.json({ data: projects });
         }
@@ -384,13 +390,15 @@ const app = new Hono()
         }
 
         // Fetch all projects in workspace and filter by member's projectIds
-        const allProjects = await databases.listDocuments<Project>(
-          DATABASE_ID,
-          PROJECTS_ID,
-          [
-            Query.equal("workspaceId", workspaceId),
-            Query.orderDesc("$createdAt"),
-          ],
+        const allProjects = await cacheRemember(
+          `cache:projects:list:workspace:${workspaceId}:user:${user.$id}`,
+          45,
+          () =>
+            databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+              Query.equal("workspaceId", workspaceId),
+              Query.orderDesc("$createdAt"),
+            ]),
+          [`workspace:${workspaceId}`, `user:${user.$id}`],
         );
 
         const filteredProjects = allProjects.documents.filter((project) =>
@@ -414,10 +422,16 @@ const app = new Hono()
     const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
-      projectId,
+    const project = await cacheRemember(
+      `cache:projects:detail:${projectId}`,
+      45,
+      () =>
+        databases.getDocument<Project>(
+          DATABASE_ID,
+          PROJECTS_ID,
+          projectId,
+        ),
+      [`project:${projectId}`],
     );
 
     // Check if user is a super admin
@@ -655,6 +669,7 @@ const app = new Hono()
           imageUrl: uploadedImage,
         },
       );
+      await invalidateCacheGroups(`project:${projectId}`, `workspace:${existingProject.workspaceId}`);
 
       return c.json({ data: updatedProject });
     },
@@ -781,6 +796,7 @@ const app = new Hono()
     // TODO: delete  tasks
     await deleteRepository(githubToken, githubUser.login, existingProject.name);
     await databases.deleteDocument(DATABASE_ID, PROJECTS_ID, projectId);
+    await invalidateCacheGroups(`project:${projectId}`, `workspace:${existingProject.workspaceId}`);
     return c.json({ data: { $id: existingProject.$id } });
   })
   .post(
@@ -848,6 +864,7 @@ const app = new Hono()
         await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, {
           projectCollaborators: updatedCollaborators,
         });
+        await invalidateCacheGroups(`project:${projectId}`, `workspace:${existingProject.workspaceId}`);
 
         return c.json({ data: { updatedCollaborators } });
       } catch (error) {
@@ -941,10 +958,16 @@ const app = new Hono()
     const databases = c.get("databases");
     const { projectId } = c.req.param();
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
-      projectId,
+    const project = await cacheRemember(
+      `cache:projects:info:${projectId}`,
+      45,
+      () =>
+        databases.getDocument<Project>(
+          DATABASE_ID,
+          PROJECTS_ID,
+          projectId,
+        ),
+      [`project:${projectId}`],
     );
 
     return c.json({
@@ -995,6 +1018,7 @@ const app = new Hono()
           inviteCode: generateInviteCode(INVITECODE_LENGTH),
         },
       );
+      await invalidateCacheGroups(`project:${projectId}`, `workspace:${workspaceId}`, `user:${user.$id}`);
       return c.json({ data: project });
     },
   )

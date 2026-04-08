@@ -80,12 +80,14 @@ NEXT_PUBLIC_APPWRITE_PROJECT=your_appwrite_project_id
 APPWRITE_API_KEY=your_appwrite_api_key
 GITHUB_TOKEN=your_github_personal_access_token
 GEMINI_API_KEY=your_gemini_api_key
+REDIS_URL=redis://localhost:6379
 ```
 
 Replace the placeholder values with your actual credentials:
 - `your_appwrite_endpoint`, `your_appwrite_project_id`, `your_appwrite_api_key`: Your Appwrite configuration
 - `your_github_personal_access_token`: Your GitHub personal access token
 - `your_gemini_api_key`: Your Google AI API key for Gemini (get it from [Google AI Studio](https://aistudio.google.com/))
+- `REDIS_URL`: Redis connection URL used for backend API caching (optional but recommended for faster loads)
 
 ### Installation
 

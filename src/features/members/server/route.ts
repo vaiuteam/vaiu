@@ -6,9 +6,39 @@ import { zValidator } from "@hono/zod-validator";
 import { DATABASE_ID, MEMBERS_ID } from "@/config";
 import { createAdminClient } from "@/lib/appwrite";
 import { sessionMiddleware } from "@/lib/session-middleware";
+import { cacheRemember } from "@/lib/redis-cache";
 
 import { getMember, getProjectMember, isSuperAdmin } from "../utilts";
 import { Member, MemberRole } from "../types";
+
+const populateMembersWithUsers = async (
+  members: Member[],
+  users: Awaited<ReturnType<typeof createAdminClient>>["users"],
+) => {
+  const userIds = [...new Set(members.map((member) => member.userId))];
+  const usersPromises = userIds.map((userId) =>
+    users.get(userId).catch((error) => {
+      console.warn(`Failed to fetch user ${userId}:`, error);
+      return {
+        $id: userId,
+        name: "Unknown User",
+        email: "unknown@example.com",
+      };
+    }),
+  );
+
+  const usersData = await Promise.all(usersPromises);
+  const usersMap = new Map(usersData.map((user) => [user.$id, user]));
+
+  return members.map((member) => {
+    const user = usersMap.get(member.userId);
+    return {
+      ...member,
+      name: user?.name || user?.email || "Unknown User",
+      email: user?.email || "unknown@example.com",
+    };
+  });
+};
 
 const app = new Hono()
   .get(
@@ -42,32 +72,20 @@ const app = new Hono()
             return c.json({ error: "Unauthorized" }, 401);
           }
         }
-        const members = await databases.listDocuments<Member>(
-          DATABASE_ID,
-          MEMBERS_ID,
-          [Query.equal("workspaceId", workspaceId)],
+        const members = await cacheRemember(
+          `cache:members:list:workspace:${workspaceId}`,
+          30,
+          () =>
+            databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [
+              Query.equal("workspaceId", workspaceId),
+            ]),
+          [`workspace:${workspaceId}`],
         );
 
-        // Batch user lookups to improve performance
-        const userIds = members.documents.map(member => member.userId);
-        const usersPromises = userIds.map(userId =>
-          users.get(userId).catch(error => {
-            console.warn(`Failed to fetch user ${userId}:`, error);
-            return { $id: userId, name: "Unknown User", email: "unknown@example.com" };
-          })
+        const populatedMembers = await populateMembersWithUsers(
+          members.documents,
+          users,
         );
-
-        const usersData = await Promise.all(usersPromises);
-        const usersMap = new Map(usersData.map(user => [user.$id, user]));
-
-        const populatedMembers = members.documents.map((member) => {
-          const user = usersMap.get(member.userId);
-          return {
-            ...member,
-            name: user?.name || user?.email || "Unknown User",
-            email: user?.email || "unknown@example.com",
-          };
-        });
         return c.json({
           data: {
             ...members,
@@ -122,34 +140,21 @@ const app = new Hono()
           }
         }
 
-        const members = await databases.listDocuments<Member>(
-          DATABASE_ID,
-          MEMBERS_ID,
-          [
-            Query.equal("workspaceId", workspaceId),
-            Query.equal("projectId", projectId),
-          ],
+        const members = await cacheRemember(
+          `cache:members:list:workspace:${workspaceId}:project:${projectId}`,
+          30,
+          () =>
+            databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [
+              Query.equal("workspaceId", workspaceId),
+              Query.contains("projectId", [projectId]),
+            ]),
+          [`workspace:${workspaceId}`, `project:${projectId}`],
         );
 
-        // Batch user lookups to improve performance
-        const userIds = members.documents.map(member => member.userId);
-        const usersPromises = userIds.map(userId =>
-          users.get(userId).catch(error => {
-            console.warn(`Failed to fetch user ${userId}:`, error);
-            return { $id: userId, name: "Unknown User", email: "unknown@example.com" };
-          })
+        const populatedMembers = await populateMembersWithUsers(
+          members.documents,
+          users,
         );
-        const usersData = await Promise.all(usersPromises);
-        const usersMap = new Map(usersData.map(user => [user.$id, user]));
-
-        const populatedMembers = members.documents.map((member) => {
-          const user = usersMap.get(member.userId);
-          return {
-            ...member,
-            name: user?.name || user?.email || "Unknown User",
-            email: user?.email || "unknown@example.com",
-          };
-        });
 
         return c.json({
           data: {
@@ -335,7 +340,7 @@ const app = new Hono()
           ];
           if (memberToUpdate.projectId) {
             queryFilters.push(
-              Query.equal("projectId", memberToUpdate.projectId),
+              Query.contains("projectId", memberToUpdate.projectId),
             );
           }
 
@@ -544,25 +549,10 @@ const app = new Hono()
           [Query.equal("role", MemberRole.SUPER_ADMIN)],
         );
 
-        // Batch user lookups to improve performance
-        const userIds = superAdmins.documents.map(member => member.userId);
-        const usersPromises = userIds.map(userId =>
-          users.get(userId).catch(error => {
-            console.warn(`Failed to fetch user ${userId}:`, error);
-            return { $id: userId, name: "Unknown User", email: "unknown@example.com" };
-          })
+        const populatedSuperAdmins = await populateMembersWithUsers(
+          superAdmins.documents,
+          users,
         );
-        const usersData = await Promise.all(usersPromises);
-        const usersMap = new Map(usersData.map(user => [user.$id, user]));
-
-        const populatedSuperAdmins = superAdmins.documents.map((member) => {
-          const user = usersMap.get(member.userId);
-          return {
-            ...member,
-            name: user?.name || user?.email || "Unknown User",
-            email: user?.email || "unknown@example.com",
-          };
-        });
 
         return c.json({
           data: {
