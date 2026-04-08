@@ -1,13 +1,11 @@
 import "server-only";
 
-import { createClient } from "redis";
+import { createClient, type RedisClientType } from "redis";
 
+type RedisValue = string | number | Buffer;
 type CacheGroup = `user:${string}` | `workspace:${string}` | `project:${string}`;
 
-type RedisClient = ReturnType<typeof createClient>;
-
-let redisClient: RedisClient | null = null;
-let redisConnectPromise: Promise<void> | null = null;
+let redisClientPromise: Promise<RedisClientType> | null = null;
 
 const getRedisUrl = () => process.env.REDIS_URL;
 
@@ -18,26 +16,19 @@ const getRedisClient = async () => {
     return null;
   }
 
-  if (!redisClient) {
-    redisClient = createClient({ url: redisUrl });
-    redisClient.on("error", (error) => {
+  if (!redisClientPromise) {
+    const client = createClient({ url: redisUrl });
+    client.on("error", (error) => {
       console.error("Redis error:", error);
     });
-  }
-
-  if (!redisClient.isOpen && !redisConnectPromise) {
-    redisConnectPromise = redisClient.connect().then(() => undefined);
+    redisClientPromise = client.connect().then(() => client);
   }
 
   try {
-    if (redisConnectPromise) {
-      await redisConnectPromise;
-    }
-    return redisClient;
+    return await redisClientPromise;
   } catch (error) {
     console.error("Redis connection failed:", error);
-    redisClient = null;
-    redisConnectPromise = null;
+    redisClientPromise = null;
     return null;
   }
 };
@@ -73,7 +64,7 @@ export const cacheRemember = async <T>(
       await Promise.all(
         groups.map(async (group) => {
           const keyForGroup = groupKey(group);
-          await client.sAdd(keyForGroup, [key]);
+          await client.sAdd(keyForGroup, key as RedisValue);
           await client.expire(keyForGroup, Math.max(ttlSeconds, 300));
         }),
       );
