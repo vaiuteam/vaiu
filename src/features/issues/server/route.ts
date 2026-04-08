@@ -29,6 +29,7 @@ import {
   createIssue,
   checkCollaborator,
 } from "@/lib/github-api";
+import { cacheRemember, invalidateCacheGroups } from "@/lib/redis-cache";
 
 const app = new Hono()
   .delete("/:issueId", sessionMiddleware, async (c) => {
@@ -113,6 +114,11 @@ const app = new Hono()
       await databases.deleteDocument(DATABASE_ID, ISSUES_ID, issueId);
     }
 
+    await invalidateCacheGroups(
+      `workspace:${issuesFromDb.workspaceId}`,
+      `project:${projectId}`,
+      `user:${user.$id}`,
+    );
     return c.json({
       success: true,
       data: {
@@ -140,6 +146,13 @@ const app = new Hono()
       const user = c.get("user");
       const { workspaceId, projectId, assigneeId, status, search, dueDate } =
         c.req.valid("query");
+      const queryParams = new URLSearchParams();
+      queryParams.set("workspaceId", workspaceId);
+      if (projectId) queryParams.set("projectId", projectId);
+      if (assigneeId) queryParams.set("assigneeId", assigneeId);
+      if (status) queryParams.set("status", status);
+      if (search) queryParams.set("search", search);
+      if (dueDate) queryParams.set("dueDate", dueDate);
 
       // Check if user is a super admin
       const isSuper = await isSuperAdmin({ databases, userId: user.$id });
@@ -210,14 +223,21 @@ const app = new Hono()
         query.push(Query.search("name", search));
       }
 
-      const issues = await databases.listDocuments<Issue>(
-        DATABASE_ID,
-        ISSUES_ID,
-        query,
+      const issues = await cacheRemember(
+        `cache:issues:list:user:${user.$id}:${queryParams.toString()}`,
+        30,
+        () => databases.listDocuments<Issue>(DATABASE_ID, ISSUES_ID, query),
+        [`workspace:${workspaceId}`, `user:${user.$id}`],
       );
 
-      const projectIds = issues.documents.map((issue) => issue.projectId);
-      const assigneeIds = issues.documents.map((issue) => issue.assigneeId);
+      const projectIds = [...new Set(issues.documents.map((issue) => issue.projectId))];
+      const assigneeIds = [
+        ...new Set(
+          issues.documents
+            .map((issue) => issue.assigneeId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
 
       /* TODO: Need to be checked and verified the correct way to update the issues storing in the projects */
       // const projects = await databases.listDocuments<Project>(
@@ -244,6 +264,9 @@ const app = new Hono()
       const projects = {
         documents: allProjects.filter(Boolean),
       };
+      const projectsMap = new Map(
+        projects.documents.map((project) => [project!.$id, project]),
+      );
 
       let allMembers: (Member | null)[] = [];
       if (assigneeIds.length > 0) {
@@ -259,7 +282,7 @@ const app = new Hono()
       };
 
       // Batch fetch all users in parallel instead of one-by-one
-      const userIds = members.documents.map(member => member!.userId);
+      const userIds = [...new Set(members.documents.map((member) => member!.userId))];
       const usersPromises = userIds.map(userId =>
         users.get(userId).catch(error => {
           console.warn(`Failed to fetch user ${userId}:`, error);
@@ -280,14 +303,13 @@ const app = new Hono()
           email: user?.email || "unknown@example.com",
         };
       });
+      const assigneesMap = new Map(assignees.map((assignee) => [assignee.$id, assignee]));
 
       const populatedTask = issues.documents.map((issue) => {
-        const project = projects.documents.find(
-          (project) => project && project.$id === issue.projectId,
-        );
-        const assignee = assignees.find(
-          (assignee) => assignee.$id === issue.assigneeId,
-        );
+        const project = projectsMap.get(issue.projectId);
+        const assignee = issue.assigneeId
+          ? assigneesMap.get(issue.assigneeId)
+          : undefined;
         return {
           ...issue,
           project,
@@ -464,6 +486,11 @@ const app = new Hono()
           },
         );
 
+        await invalidateCacheGroups(
+          `workspace:${workspaceId}`,
+          `project:${projectId}`,
+          `user:${user.$id}`,
+        );
         return c.json({ data: issue, issue: issueInGit });
       } catch (error) {
         console.error("Error:", error);
@@ -600,6 +627,11 @@ const app = new Hono()
         }
       }
 
+      await invalidateCacheGroups(
+        `workspace:${exisistingTask.workspaceId}`,
+        `project:${exisistingTask.projectId}`,
+        `user:${user.$id}`,
+      );
       return c.json({ data: issue });
     },
   )
@@ -609,10 +641,18 @@ const app = new Hono()
     const { issueId } = c.req.param();
     const databases = c.get("databases");
 
-    const issue = await databases.getDocument<Issue>(
-      DATABASE_ID,
-      ISSUES_ID,
-      issueId,
+    const issue = await cacheRemember(
+      `cache:issues:detail:${issueId}`,
+      30,
+      () => databases.getDocument<Issue>(DATABASE_ID, ISSUES_ID, issueId),
+      [],
+    );
+    // Add groups after workspace/project are known for targeted invalidation.
+    await cacheRemember(
+      `cache:issues:detail:${issueId}`,
+      30,
+      () => Promise.resolve(issue),
+      [`workspace:${issue.workspaceId}`, `project:${issue.projectId}`],
     );
 
     // Check if user is a super admin
@@ -638,10 +678,16 @@ const app = new Hono()
       }
     }
 
-    const project = await databases.getDocument<Project>(
-      DATABASE_ID,
-      PROJECTS_ID,
-      issue.projectId,
+    const project = await cacheRemember(
+      `cache:projects:detail:${issue.projectId}`,
+      45,
+      () =>
+        databases.getDocument<Project>(
+          DATABASE_ID,
+          PROJECTS_ID,
+          issue.projectId,
+        ),
+      [`project:${issue.projectId}`],
     );
 
     let assignee;
@@ -902,6 +948,9 @@ const app = new Hono()
         }),
       );
 
+      if (workspaceId) {
+        await invalidateCacheGroups(`workspace:${workspaceId}`, `user:${user.$id}`);
+      }
       return c.json({ data: updatedTasks });
     },
   )
@@ -1154,6 +1203,11 @@ const app = new Hono()
           newIssues.push(...batchResults.filter(Boolean));
         }
 
+        await invalidateCacheGroups(
+          `workspace:${project.workspaceId}`,
+          `project:${projectId}`,
+          `user:${user.$id}`,
+        );
         return c.json({
           data: issuesFromGit,
           created: newIssues.length,
@@ -1173,11 +1227,23 @@ const app = new Hono()
   .get("/:issueId/comments", sessionMiddleware, async (c) => {
     const databases = c.get("databases");
     const { issueId } = c.req.param();
+    const issue = await cacheRemember(
+      `cache:issues:meta:${issueId}`,
+      30,
+      () => databases.getDocument<Issue>(DATABASE_ID, ISSUES_ID, issueId),
+      [],
+    );
 
-    const comments = await databases.listDocuments(DATABASE_ID, COMMENTS_ID, [
-      Query.equal("issueId", issueId),
-      Query.orderDesc("$createdAt"),
-    ]);
+    const comments = await cacheRemember(
+      `cache:issues:comments:${issueId}`,
+      20,
+      () =>
+        databases.listDocuments(DATABASE_ID, COMMENTS_ID, [
+          Query.equal("issueId", issueId),
+          Query.orderDesc("$createdAt"),
+        ]),
+      [`workspace:${issue.workspaceId}`, `project:${issue.projectId}`],
+    );
 
     return c.json({ data: comments });
   })
@@ -1226,6 +1292,16 @@ const app = new Hono()
           },
         );
 
+        const issue = await databases.getDocument<Issue>(
+          DATABASE_ID,
+          ISSUES_ID,
+          issueId,
+        );
+        await invalidateCacheGroups(
+          `workspace:${issue.workspaceId}`,
+          `project:${issue.projectId}`,
+          `user:${user.$id}`,
+        );
         return c.json({ data: comment });
       } catch (error) {
         console.error("Error creating comment:", error);

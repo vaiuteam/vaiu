@@ -70,6 +70,7 @@
     "react-markdown": "^10.1.0",
     "react-use": "^17.5.1",
     "recharts": "^2.13.0",
+    "redis": "^5.11.0",
     "server-only": "^0.0.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
