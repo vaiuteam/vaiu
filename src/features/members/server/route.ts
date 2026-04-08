@@ -543,7 +543,7 @@ const app = new Hono()
           return c.json({ error: "Only super admins can view super admin list" }, 403);
         }
 
-        const superAdmins = await databases.listDocuments(
+        const superAdmins = await databases.listDocuments<Member>(
           DATABASE_ID,
           MEMBERS_ID,
           [Query.equal("role", MemberRole.SUPER_ADMIN)],
