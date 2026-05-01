@@ -5,9 +5,10 @@ import { sessionMiddleware } from "@/lib/session-middleware";
 import { getMember, isSuperAdmin } from "@/features/members/utilts";
 import { DATABASE_ID, PROJECTS_ID } from "@/config";
 import { Project } from "@/features/projects/types";
-import { Octokit } from "octokit";
 import { generateAISummary, SummaryInput } from "@/lib/ai-service";
-import { getAccessToken } from "@/lib/github-api";
+import { getAccessToken, getPullRequest, getIssue, listIssueComments } from "@/lib/github-api";
+import { consumeAICredits } from "@/features/subscriptions/utils";
+import { AIFeatureCost } from "@/features/subscriptions/types";
 
 const app = new Hono()
   .post("/generate",
@@ -56,27 +57,37 @@ const app = new Hono()
         }, 400);
       }
 
-      const octokit = new Octokit({
-        auth: githubToken,
+      // Check and consume AI credits
+      const creditResult = await consumeAICredits({
+        databases,
+        userId: user.$id,
+        workspaceId,
+        creditsToConsume: AIFeatureCost.SUMMARY,
       });
+
+      if (!creditResult.success) {
+        return c.json({ error: creditResult.message }, 402);
+      }
 
       try {
         let summaryInput: SummaryInput;
 
         if (type === "pr") {
           // Fetch PR details
-          const { data: pr } = await octokit.rest.pulls.get({
-            owner: project.owner,
-            repo: project.name,
-            pull_number: Number(identifier),
-          });
+          const pr = await getPullRequest(
+            githubToken,
+            project.owner,
+            project.name,
+            Number(identifier)
+          );
 
           // Fetch PR comments
-          const { data: comments } = await octokit.rest.issues.listComments({
-            owner: project.owner,
-            repo: project.name,
-            issue_number: Number(identifier),
-          });
+          const comments = await listIssueComments(
+            githubToken,
+            project.owner,
+            project.name,
+            Number(identifier)
+          );
 
           summaryInput = {
             title: pr.title,
@@ -101,18 +112,20 @@ const app = new Hono()
           };
         } else {
           // Fetch issue details
-          const { data: issue } = await octokit.rest.issues.get({
-            owner: project.owner,
-            repo: project.name,
-            issue_number: Number(identifier),
-          });
+          const issue = await getIssue(
+            githubToken,
+            project.owner,
+            project.name,
+            Number(identifier)
+          );
 
           // Fetch issue comments
-          const { data: comments } = await octokit.rest.issues.listComments({
-            owner: project.owner,
-            repo: project.name,
-            issue_number: Number(identifier),
-          });
+          const comments = await listIssueComments(
+            githubToken,
+            project.owner,
+            project.name,
+            Number(identifier)
+          );
 
           summaryInput = {
             title: issue.title,

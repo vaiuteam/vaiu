@@ -4,6 +4,14 @@ Vaiu is a collaborative platform for managing GitHub repositories, tracking issu
 
 ## Features
 
+### Subscription Management
+
+- **4 Flexible Plans**: Free, Pro, Standard, and Enterprise tiers
+- **Usage Tracking**: Monitor workspaces, projects, storage, and AI credits
+- **Razorpay Integration**: Secure payment processing with support for monthly and yearly billing
+- **Automatic Limits**: Enforced limits based on subscription tier
+- **Easy Upgrades**: Simple in-app upgrade flow with immediate activation
+
 ### Project Management
 
 - Create new GitHub repositories directly from the platform
@@ -56,6 +64,7 @@ Vaiu is a collaborative platform for managing GitHub repositories, tracking issu
 - **Database**: Appwrite Database
 - **Storage**: Appwrite Storage
 - **API**: Hono.js API routes
+- **Payments**: Razorpay for subscription management
 - **GitHub Integration**: Octokit
 - **AI Integration**: Google Gemini API for intelligent code review
 - **Form Handling**: React Hook Form with Zod validation
@@ -72,20 +81,19 @@ Vaiu is a collaborative platform for managing GitHub repositories, tracking issu
 
 ### Environment Setup
 
-Create a `.env.local` file with the following variables:
+1. Copy the `.env.example` file to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
 
-```
-NEXT_PUBLIC_APPWRITE_ENDPOINT=your_appwrite_endpoint
-NEXT_PUBLIC_APPWRITE_PROJECT=your_appwrite_project_id
-APPWRITE_API_KEY=your_appwrite_api_key
-GITHUB_TOKEN=your_github_personal_access_token
-GEMINI_API_KEY=your_gemini_api_key
-```
+2. Fill in the required environment variables in `.env.local`:
+   - Appwrite credentials (endpoint, project ID, API key, collection IDs)
+   - Razorpay credentials (key ID, key secret, webhook secret)
+   - Google Gemini API key
+   - GitHub OAuth credentials (if using GitHub login)
+   - LiveKit credentials (for real-time collaboration)
 
-Replace the placeholder values with your actual credentials:
-- `your_appwrite_endpoint`, `your_appwrite_project_id`, `your_appwrite_api_key`: Your Appwrite configuration
-- `your_github_personal_access_token`: Your GitHub personal access token
-- `your_gemini_api_key`: Your Google AI API key for Gemini (get it from [Google AI Studio](https://aistudio.google.com/))
+For detailed setup instructions on the subscription system, see [SUBSCRIPTION_SETUP.md](SUBSCRIPTION_SETUP.md)
 
 ### Installation
 

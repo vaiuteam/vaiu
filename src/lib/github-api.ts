@@ -260,6 +260,26 @@ export async function createIssue(
 }
 
 /**
+ * Get a issue
+ */
+export async function getIssue(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number
+) {
+    const octokit = new Octokit({ auth: accessToken });
+
+    const { data: issue } = await octokit.rest.issues.get({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+
+    return issue;
+}
+
+/**
  * Update an issue
  */
 export async function updateIssue(
@@ -285,6 +305,26 @@ export async function updateIssue(
     });
 
     return issue;
+}
+
+/**
+ * List comments for an issue
+ */
+export async function listIssueComments(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number
+) {
+    const octokit = new Octokit({ auth: accessToken });
+
+    const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+
+    return comments;
 }
 
 /**

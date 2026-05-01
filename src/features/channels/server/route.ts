@@ -9,6 +9,8 @@ import { z } from "zod";
 import { getMember } from "@/features/members/utilts";
 import { Room } from "../types";
 
+import { checkSubscriptionLimit } from "@/features/subscriptions/utils";
+
 const app = new Hono()
   .post("/", zValidator("json", RoomSchema), sessionMiddleware, async (c) => {
     const databases = c.get("databases");
@@ -23,6 +25,29 @@ const app = new Hono()
     });
 
     if (!member) return c.json({ error: "Unauthorized" }, 401);
+
+    // Check room limit
+    const limitCheck = await checkSubscriptionLimit({
+      databases,
+      userId: user.$id,
+      limitType: "rooms",
+      workspaceId,
+    });
+
+    if (!limitCheck.allowed) {
+      return c.json(
+        {
+          error: "Room limit reached",
+          details: {
+            limit: limitCheck.limit,
+            current: limitCheck.current,
+            plan: limitCheck.plan,
+            message: `You have reached the maximum number of rooms (${limitCheck.limit}) for your ${limitCheck.plan} plan in this workspace. Please upgrade to create more rooms.`,
+          },
+        },
+        403
+      );
+    }
 
     try {
       const room = await databases.createDocument(

@@ -53,6 +53,15 @@ export function Navbar({ className }: { className?: string }) {
           <Button asChild variant="ghost" className="font-semibold">
             <Link href="/docs">Docs</Link>
           </Button>
+          {/* <Button
+            asChild
+            variant="ghost"
+            className="font-semibold"
+          >
+            <Link href="/pricing">
+              Pricing
+            </Link>
+          </Button> */}
           <Button
             asChild
             variant="outline"

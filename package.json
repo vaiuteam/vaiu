@@ -60,6 +60,7 @@
     "nuqs": "1.19.1",
     "octokit": "^4.0.2",
     "query-string": "^8.1.0",
+    "razorpay": "^2.9.6",
     "react": "^18",
     "react-big-calendar": "1.14.1",
     "react-day-picker": "^9.7.0",
