@@ -18,6 +18,7 @@ import { useCreateProjectModal } from "@/features/projects/hooks/use-create-proj
 import { useGetWorkspaceAnalytics } from "@/features/workspaces/api/use-get-workspace-analytics";
 import { useGetWorkspace } from "@/features/workspaces/api/use-get-workspace";
 import { Separator } from "@/components/ui/separator";
+import { SourceTypeBadge, WorkspaceTypeBadge } from "@/components/type-badge";
 
 export const WorkspaceIdClient = () => {
   const workspaceId = useWorkspaceId();
@@ -61,7 +62,12 @@ export const WorkspaceIdClient = () => {
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+            {workspace?.type && (
+              <WorkspaceTypeBadge type={workspace.type} />
+            )}
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Track what needs attention across your workspace at a glance.
           </p>
@@ -106,7 +112,14 @@ export const TaskList = ({ data, total }: TaskListProps) => {
                 href={`/workspaces/${workspaceId}/projects/${issue.projectId}/tasks/${issue.$id}`}
                 className="block rounded-2xl px-1 py-4 transition hover:bg-background/25"
               >
-                <p className="truncate text-lg font-medium">{issue.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-lg font-medium">{issue.name}</p>
+                  <SourceTypeBadge
+                    type={issue.issueType}
+                    kind="issue"
+                    showIcon={false}
+                  />
+                </div>
                 <div className="flex items-center gap-x-2">
                   <p>{issue.project?.name}</p>
                   <div className="dot" />
@@ -167,9 +180,17 @@ export const ProjectList = ({ data, total }: ProjectListProps) => {
                   name={project.name}
                   image={project.imageUrl}
                 />
-                <p className="truncate text-lg font-medium">
-                  {project.name}
-                </p>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="truncate text-lg font-medium">
+                    {project.name}
+                  </p>
+                  <SourceTypeBadge
+                    type={project.projectType}
+                    kind="project"
+                    showIcon={false}
+                    className="self-start"
+                  />
+                </div>
               </Link>
             </li>
           ))}

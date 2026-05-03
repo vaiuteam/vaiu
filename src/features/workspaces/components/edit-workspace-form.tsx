@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, CopyIcon, ImageIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkspaceTypeBadge } from "@/components/type-badge";
 import {
   Form,
   FormControl,
@@ -128,8 +129,9 @@ export const EditWorkspaceForm = ({
             <ArrowLeft className="mr-2 size-4" />
             Back
           </Button>
-          <CardTitle className="text-xl font-bold">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-xl font-bold">
             {initialValues.name}
+            <WorkspaceTypeBadge type={initialValues.type} />
           </CardTitle>
         </CardHeader>
         <div className="px-7">

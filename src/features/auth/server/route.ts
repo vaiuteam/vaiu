@@ -6,6 +6,7 @@ import { deleteCookie, setCookie } from "hono/cookie";
 import { createAdminClient } from "@/lib/appwrite";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { DATABASE_ID, USER_PROFILES_ID } from "@/config";
+import { getAccessToken } from "@/lib/github-api";
 
 import { AUTH_COOKIE } from "../constants";
 import {
@@ -25,6 +26,17 @@ const app = new Hono()
     }
 
     return c.json({ data: user });
+  })
+  .get("/github-status", sessionMiddleware, async (c) => {
+    const user = c.get("user");
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const token = await getAccessToken(user.$id);
+
+    return c.json({ data: { connected: Boolean(token) } });
   })
   .post("/login", zValidator("json", loginSchema), async (c) => {
     try {

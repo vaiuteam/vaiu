@@ -14,6 +14,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
+import { SourceTypeBadge } from "@/components/type-badge";
 import { PrViewSwitcher } from "@/features/pull-requests/components/pr-view-switcher";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskViewSwitcher } from "@/features/issues/components/task-view-switcher";
@@ -165,20 +166,25 @@ export const ProjectIdClient = () => {
             className="size-10"
           />
           <div>
-            <p className="text-xl font-semibold capitalize">{project.name}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xl font-semibold capitalize">{project.name}</p>
+              <SourceTypeBadge type={project.projectType} kind="project" />
+            </div>
             <p className="text-sm text-muted-foreground">
               Issues, pull requests, docs, and collaboration in one place.
             </p>
           </div>
-          <Link
-            href={`https://github.com/${project.owner}/${project.name}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-1 text-muted-foreground transition hover:text-foreground"
-            title="View on GitHub"
-          >
-            <FaGithub className="size-5" />
-          </Link>
+          {project.projectType !== "vaiu" && project.owner && (
+            <Link
+              href={`https://github.com/${project.owner}/${project.name}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-muted-foreground transition hover:text-foreground"
+              title="View on GitHub"
+            >
+              <FaGithub className="size-5" />
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

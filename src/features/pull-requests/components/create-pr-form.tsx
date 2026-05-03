@@ -71,8 +71,8 @@ export const CreatePrForm = ({ onCancel }: CreatePrProps) => {
 
     const headProject = prOptions.headProjects[0];
     if (headProject && !form.getValues("headOwner")) {
-      form.setValue("headOwner", headProject.owner);
-      form.setValue("headRepo", headProject.repo);
+      form.setValue("headOwner", headProject.owner ?? "");
+      form.setValue("headRepo", headProject.repo ?? "");
     }
 
     if (headProject?.branches[0] && !form.getValues("branch")) {

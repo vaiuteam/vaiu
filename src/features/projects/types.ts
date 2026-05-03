@@ -6,7 +6,8 @@ export type Project = Models.Document & {
   projectId: string;
   inviteCode: string;
   workspaceId: string;
-  owner: string;
+  owner: string | null;
+  projectType: "vaiu" | "github";
   projectAdmin: string;
   projectCollaborators: string[];
 };

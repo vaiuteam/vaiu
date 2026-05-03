@@ -8,6 +8,7 @@ import { useGetProjects } from "@/features/projects/api/use-get-projects";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { useCreateProjectModal } from "@/features/projects/hooks/use-create-project-modal";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
+import { SourceTypeBadge } from "@/components/type-badge";
 
 export const Projects = () => {
   const pathname = usePathname();
@@ -41,6 +42,12 @@ export const Projects = () => {
             >
               <ProjectAvatar image={project.imageUrl} name={project.name} />
               <span className="truncate">{project.name}</span>
+              <SourceTypeBadge
+                type={project.projectType}
+                kind="project"
+                showIcon={false}
+                className="ml-auto px-1.5 py-0 text-[9px]"
+              />
             </div>
           </Link>
         );

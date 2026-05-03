@@ -8,7 +8,7 @@ export const createProjectSchema = z.object({
       z.string().transform((value) => (value === "" ? undefined : value)),
     ])
     .optional(),
-
+  projectType: z.enum(["vaiu", "github"]).default("github"),
   workspaceId: z.string(),
 });
 export const updateProjectSchema = z.object({

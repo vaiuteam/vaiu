@@ -10,6 +10,7 @@ import { Issue } from "@/features/issues/types";
 
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
 import { MemberAvatar } from "@/features/members/components/members-avatar";
+import { SourceTypeBadge } from "@/components/type-badge";
 
 import { TaskDate } from "./task-date";
 import { TaskActions } from "./task-actions";
@@ -32,23 +33,28 @@ export const columns: ColumnDef<Issue>[] = [
       const name = row.original.name;
       const number = row.original.number;
       const project = row.original.project;
+      const issueType = row.original.issueType;
 
-      // If issue has a GitHub number and project has owner/name, create GitHub link
-      if (number && project?.owner && project?.name) {
-        const githubUrl = `https://github.com/${project.owner}/${project.name}/issues/${number}`;
-        return (
+      const titleNode =
+        number && project?.owner && project?.name && issueType !== "vaiu" ? (
           <Link
-            href={githubUrl}
+            href={`https://github.com/${project.owner}/${project.name}/issues/${number}`}
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline"
           >
             <p className="line-clamp-1">#{number} {name}</p>
           </Link>
+        ) : (
+          <p className="line-clamp-1">{name}</p>
         );
-      }
 
-      return <p className="line-clamp-1">{name}</p>;
+      return (
+        <div className="flex items-center gap-2">
+          {titleNode}
+          <SourceTypeBadge type={issueType} kind="issue" showIcon={false} />
+        </div>
+      );
     },
   },
   {

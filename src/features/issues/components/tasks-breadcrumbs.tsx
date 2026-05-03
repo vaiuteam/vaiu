@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useDeleteTask } from "../api/use-delete-task";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useRouter } from "next/navigation";
+import { SourceTypeBadge } from "@/components/type-badge";
 
 interface TasksBreadcrumbsProps {
   project: Project;
@@ -51,8 +52,18 @@ export const TasksBreadcrumbs = ({ project, issue }: TasksBreadcrumbsProps) => {
           {project.name}
         </p>
       </Link>
+      <SourceTypeBadge
+        type={project.projectType}
+        kind="project"
+        showIcon={false}
+      />
       <ChevronRight className="size-4 text-muted-foreground lg:size-5" />
       <p className="text-xs font-semibold lg:text-lg">{issue.name}</p>
+      <SourceTypeBadge
+        type={issue.issueType}
+        kind="issue"
+        showIcon={false}
+      />
       <Button
         onClick={handleDeleteTask}
         variant="destructive"

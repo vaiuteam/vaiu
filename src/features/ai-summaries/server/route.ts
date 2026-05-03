@@ -48,6 +48,16 @@ const app = new Hono()
         return c.json({ error: "Project not found" }, 404);
       }
 
+      if (!project.owner) {
+        return c.json(
+          {
+            error:
+              "AI summaries for issues and PRs require a GitHub-linked project.",
+          },
+          400,
+        );
+      }
+
       // Get GitHub OAuth access token
       const githubToken = await getAccessToken(user.$id);
 

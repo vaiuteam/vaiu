@@ -1,7 +1,8 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { ImageIcon, Loader2, Github } from "lucide-react";
+import Link from "next/link";
+import { ImageIcon, Loader2, Github, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,6 +48,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAddExistingProject } from "../api/use-add-existing-project";
 import { useGetRepos } from "../api/use-get-repos";
+import { useGetGithubStatus } from "@/features/auth/api/use-github-status";
 
 interface CreateProjectFormProps {
   onCancel?: () => void;
@@ -58,6 +60,8 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
   const { mutate, isPending } = useCreateProject();
   const { mutate: mutateEP, isPending: isPendingEP } = useAddExistingProject();
   const { data: repos, isLoading: isLoadingRepos, error: reposError } = useGetRepos({ workspaceId });
+  const { data: githubStatus, isLoading: isLoadingGithubStatus } = useGetGithubStatus();
+  const githubConnected = !!githubStatus?.connected;
   const newIconInputRef = useRef<HTMLInputElement>(null);
   const existingIconInputRef = useRef<HTMLInputElement>(null);
   const form1 = useForm<CreateProjectSchema>({
@@ -65,8 +69,15 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     defaultValues: {
       name: "",
       image: "",
+      projectType: "github",
     },
   });
+
+  useEffect(() => {
+    if (isLoadingGithubStatus) return;
+    form1.setValue("projectType", githubConnected ? "github" : "vaiu");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [githubConnected, isLoadingGithubStatus]);
 
   const form2 = useForm<AddExistingProjectSchema>({
     resolver: zodResolver(addExistingProjectSchema.omit({ workspaceId: true })),
@@ -158,6 +169,73 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
             <Form {...form1}>
               <form onSubmit={form1.handleSubmit(onSubmit)}>
                 <div className="flex flex-col gap-y-4">
+                  {!isLoadingGithubStatus && !githubConnected && (
+                    <div className="flex flex-col gap-2 rounded-2xl border border-blue-200/60 bg-blue-500/10 p-3 text-sm text-blue-700 dark:border-blue-500/30 dark:text-blue-200 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-2">
+                        <Github className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          Connect GitHub to create a GitHub project. Otherwise, this will be created as a Vaiu project.
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        asChild
+                        className="self-start sm:self-auto"
+                      >
+                        <Link href="/oauth/github">Connect GitHub</Link>
+                      </Button>
+                    </div>
+                  )}
+                  <FormField
+                    control={form1.control}
+                    name="projectType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project type</FormLabel>
+                        <Select
+                          value={field.value ?? "github"}
+                          onValueChange={field.onChange}
+                          disabled={isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose project type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem
+                              value="github"
+                              disabled={!githubConnected}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <Github className="h-4 w-4" />
+                                GitHub project
+                                {!githubConnected && (
+                                  <span className="text-xs text-muted-foreground">
+                                    (connect GitHub)
+                                  </span>
+                                )}
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="vaiu">
+                              <span className="inline-flex items-center gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                Vaiu project
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {field.value === "vaiu"
+                            ? "A Vaiu project lives only inside this workspace and isn’t backed by a GitHub repository."
+                            : "A GitHub project will create a matching repository under your connected GitHub account."}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form1.control}
                     name="name"

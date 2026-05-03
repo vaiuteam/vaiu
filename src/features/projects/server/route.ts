@@ -83,7 +83,7 @@ const app = new Hono()
       const storage = c.get("storage");
       const user = c.get("user");
 
-      const { name, image, workspaceId } = c.req.valid("form");
+      const { name, image, workspaceId, projectType } = c.req.valid("form");
 
       const member = await getMember({
         databases,
@@ -118,12 +118,13 @@ const app = new Hono()
         );
       }
 
-      // Get GitHub OAuth access token from user profile
-      const githubToken = await getAccessToken(user.$id);
+      const isGithubProject = projectType === "github";
 
-      if (!githubToken) {
+      const githubToken = isGithubProject ? await getAccessToken(user.$id) : null;
+
+      if (isGithubProject && !githubToken) {
         return c.json({
-          error: "GitHub account not connected. Please sign in with GitHub to create projects."
+          error: "GitHub account not connected. Please sign in with GitHub to create a GitHub project, or create a Vaiu project instead.",
         }, 400);
       }
 
@@ -159,10 +160,17 @@ const app = new Hono()
       if (existingProject.total !== 0) {
         return c.json({ error: "Project with this name already exists" }, 400);
       } else {
-        const repo = await createRepository(githubToken, name);
+        let repo: Awaited<ReturnType<typeof createRepository>> | null = null;
+        let owner: string | null = null;
 
-        if (!repo) {
-          return c.json({ error: "Failed to create repository" }, 500);
+        if (isGithubProject) {
+          repo = await createRepository(githubToken!, name);
+
+          if (!repo) {
+            return c.json({ error: "Failed to create repository" }, 500);
+          }
+
+          owner = repo.owner.login;
         }
 
         const project = await databases.createDocument(
@@ -175,7 +183,8 @@ const app = new Hono()
             workspaceId,
             projectAdmin: member.$id,
             inviteCode: generateInviteCode(INVITECODE_LENGTH),
-            owner: repo.owner.login,
+            owner,
+            projectType,
           },
         );
 
@@ -297,6 +306,7 @@ const app = new Hono()
           projectAdmin: member.$id,
           inviteCode: generateInviteCode(INVITECODE_LENGTH),
           owner: repoOwner,
+          projectType: "github",
         },
       );
 

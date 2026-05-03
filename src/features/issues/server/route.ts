@@ -80,8 +80,12 @@ const app = new Hono()
       }
     }
 
-    // Only close on GitHub if this is a GitHub issue
-    if (issuesFromDb.issueType === "github") {
+    // Only close on GitHub if this is a GitHub issue backed by a linked repo
+    if (
+      issuesFromDb.issueType === "github" &&
+      existingProject.owner &&
+      issuesFromDb.number
+    ) {
       const githubToken = await getAccessToken(user.$id);
       if (!githubToken) {
         return c.json(
@@ -92,11 +96,6 @@ const app = new Hono()
         );
       }
 
-      if (!issuesFromDb.number) {
-        return c.json({ error: "Issue number not found in database" }, 400);
-      }
-
-      // Close the GitHub issue and delete from database in parallel
       await Promise.all([
         updateIssue(
           githubToken,
@@ -105,10 +104,9 @@ const app = new Hono()
           issuesFromDb.number,
           { state: "closed" },
         ),
-        databases.deleteDocument(DATABASE_ID, ISSUES_ID, issueId)
+        databases.deleteDocument(DATABASE_ID, ISSUES_ID, issueId),
       ]);
     } else {
-      // For Vaiu-only issues, just delete from database
       await databases.deleteDocument(DATABASE_ID, ISSUES_ID, issueId);
     }
 
@@ -599,7 +597,7 @@ const app = new Hono()
           // Write operation: use user OAuth token for proper attribution
           const githubToken = await getAccessToken(user.$id);
 
-          if (githubToken) {
+          if (githubToken && project.owner) {
             const newState = status === "DONE" ? "closed" : "open";
 
             await updateIssue(
@@ -883,7 +881,7 @@ const app = new Hono()
             (await getAccessToken(user.$id));
           const writeToken = await getAccessToken(user.$id);
 
-          if (readToken) {
+          if (readToken && project.owner) {
             const issuesFromGit = await listRepositoryIssues(
               readToken,
               project.owner,
@@ -938,6 +936,16 @@ const app = new Hono()
           PROJECTS_ID,
           projectId,
         );
+
+        if (project.projectType === "vaiu" || !project.owner) {
+          return c.json(
+            {
+              error:
+                "GitHub sync is only available for GitHub-linked projects.",
+            },
+            400,
+          );
+        }
 
         // Check if user is a super admin
         const isSuper = await isSuperAdmin({ databases, userId: user.$id });
