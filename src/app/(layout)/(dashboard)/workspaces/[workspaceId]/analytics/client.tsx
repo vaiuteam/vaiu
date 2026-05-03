@@ -172,7 +172,7 @@ const buildProjectTaskCounts = (
 const buildMemberTaskCounts = (
   issues:
     | {
-        assigneeId: string;
+        assigneeId: string | null;
         status: IssueStatus;
       }[]
     | undefined,
