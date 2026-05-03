@@ -97,6 +97,38 @@ export async function getRepository(
     return data;
 }
 
+export async function listRepositoryBranches(
+    accessToken: string,
+    owner: string,
+    repo: string
+) {
+    const octokit = new Octokit({ auth: accessToken });
+
+    const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
+        owner,
+        repo,
+        per_page: 100,
+    });
+
+    return branches;
+}
+
+export async function listRepositoryForks(
+    accessToken: string,
+    owner: string,
+    repo: string
+) {
+    const octokit = new Octokit({ auth: accessToken });
+
+    const forks = await octokit.paginate(octokit.rest.repos.listForks, {
+        owner,
+        repo,
+        per_page: 100,
+    });
+
+    return forks;
+}
+
 // ============================================================================
 // USER OPERATIONS
 // ============================================================================

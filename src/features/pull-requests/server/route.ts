@@ -13,6 +13,9 @@ import {
   listPullRequests,
   createPullRequest,
   addIssueAssignees,
+  getAuthenticatedUser,
+  listRepositoryBranches,
+  listRepositoryForks,
 } from "@/lib/github-api";
 import { createPrSchema } from "../schemas";
 import { ID, Query, type Databases } from "node-appwrite";
@@ -148,6 +151,87 @@ const app = new Hono()
       }
     }
   )
+  .get(
+    "/:projectId/create-options",
+    sessionMiddleware,
+    async (c) => {
+      const databases = c.get("databases");
+      const user = c.get("user");
+      const { projectId } = c.req.param();
+
+      const { project, access } = await getProjectContext({
+        databases,
+        userId: user.$id,
+        projectId,
+      });
+
+      if (!project) {
+        return c.json({ error: "Project not found" }, 404);
+      }
+
+      if (!access.hasAccess) {
+        return c.json({ error: "Forbidden" }, 403);
+      }
+
+      const githubToken = await getAccessToken(user.$id);
+
+      if (!githubToken) {
+        return c.json({
+          error: "GitHub account not connected. Cannot create pull request.",
+        }, 400);
+      }
+
+      const githubUser = await getAuthenticatedUser(githubToken);
+      const [baseBranches, forks] = await Promise.all([
+        listRepositoryBranches(githubToken, project.owner, project.name),
+        listRepositoryForks(githubToken, project.owner, project.name),
+      ]);
+
+      const userForks = forks.filter(
+        (fork) => fork.owner?.login === githubUser.login,
+      );
+      const headProjects = [
+        {
+          owner: project.owner,
+          repo: project.name,
+          fullName: `${project.owner}/${project.name}`,
+        },
+        ...userForks.map((fork) => ({
+          owner: fork.owner?.login || project.owner,
+          repo: fork.name,
+          fullName: fork.full_name,
+        })),
+      ];
+
+      const headProjectsWithBranches = await Promise.all(
+        headProjects.map(async (headProject) => {
+          const branches = await listRepositoryBranches(
+            githubToken,
+            headProject.owner,
+            headProject.repo,
+          );
+
+          return {
+            ...headProject,
+            branches: branches.map((branch) => branch.name),
+          };
+        }),
+      );
+
+      return c.json({
+        data: {
+          githubUsername: githubUser.login,
+          baseProject: {
+            owner: project.owner,
+            repo: project.name,
+            fullName: `${project.owner}/${project.name}`,
+            branches: baseBranches.map((branch) => branch.name),
+          },
+          headProjects: headProjectsWithBranches,
+        },
+      });
+    },
+  )
   .post(
     "/:projectId/submit-pull-request",
     sessionMiddleware,
@@ -158,14 +242,14 @@ const app = new Hono()
 
       const { projectId } = c.req.param();
 
-      const { title, description, branch, baseBranch, githubUsername } =
+      const { title, description, headOwner, headRepo, branch, baseBranch } =
         c.req.valid("form");
 
-      if (!title || !description || !branch || !baseBranch || !githubUsername) {
+      if (!title || !description || !headOwner || !headRepo || !branch || !baseBranch) {
         return c.json(
           {
             error:
-              "Title, description, branch, base branch and GitHub username are required",
+              "Title, description, head project, head branch and base branch are required",
           },
           400
         );
@@ -195,12 +279,17 @@ const app = new Hono()
       }
 
       try {
+        const githubUser = await getAuthenticatedUser(githubToken);
+        const head =
+          headOwner === project.owner && headRepo === project.name
+            ? branch
+            : `${headOwner}:${branch}`;
         const createPR = await createPullRequest(
           githubToken,
           project.owner,
           project.name,
           title,
-          branch,
+          head,
           baseBranch,
           description
         );
@@ -210,7 +299,7 @@ const app = new Hono()
           description,
           branch,
           baseBranch,
-          githubUsername,
+          githubUsername: githubUser.login,
           projectId,
         });
 
@@ -219,7 +308,7 @@ const app = new Hono()
           project.owner,
           project.name,
           createPR.number,
-          [githubUsername],
+          [githubUser.login],
         );
 
         return c.json(

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,12 +22,20 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { cn } from "@/lib/utils";
 
 import { createPrSchema, type CreatePrSchema } from "../schemas";
 import { useCreatePr } from "../api/use-create-pr";
+import { useGetPrCreateOptions } from "../api/use-get-pr-create-options";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
 
@@ -39,15 +48,42 @@ export const CreatePrForm = ({ onCancel }: CreatePrProps) => {
   const projectId = useProjectId();
   const router = useRouter();
   const { mutate, isPending } = useCreatePr();
+  const { data: prOptions, isLoading: loadingPrOptions } =
+    useGetPrCreateOptions({ projectId });
   const form = useForm<CreatePrSchema>({
     resolver: zodResolver(createPrSchema),
     defaultValues: {
       description: "",
+      headOwner: "",
+      headRepo: "",
       branch: "",
       baseBranch: "",
-      githubUsername: "",
     },
   });
+  const headOwner = form.watch("headOwner");
+  const headRepo = form.watch("headRepo");
+  const selectedHeadProject = prOptions?.headProjects.find(
+    (project) => project.owner === headOwner && project.repo === headRepo,
+  );
+
+  useEffect(() => {
+    if (!prOptions) return;
+
+    const headProject = prOptions.headProjects[0];
+    if (headProject && !form.getValues("headOwner")) {
+      form.setValue("headOwner", headProject.owner);
+      form.setValue("headRepo", headProject.repo);
+    }
+
+    if (headProject?.branches[0] && !form.getValues("branch")) {
+      form.setValue("branch", headProject.branches[0]);
+    }
+
+    if (prOptions.baseProject.branches[0] && !form.getValues("baseBranch")) {
+      form.setValue("baseBranch", prOptions.baseProject.branches[0]);
+    }
+  }, [form, prOptions]);
+
   const onSubmit = (values: CreatePrSchema) => {
     const finalValues = {
       ...values,
@@ -123,18 +159,74 @@ export const CreatePrForm = ({ onCancel }: CreatePrProps) => {
               <div className="">
                 <FormField
                   control={form.control}
+                  name="headOwner"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex justify-between">
+                        <div className="flex items-center">Head project</div>
+                      </FormLabel>
+                      <Select
+                        value={
+                          field.value && headRepo
+                            ? `${field.value}/${headRepo}`
+                            : undefined
+                        }
+                        onValueChange={(value) => {
+                          const [owner, repo] = value.split("/");
+                          field.onChange(owner);
+                          form.setValue("headRepo", repo);
+                          form.setValue("branch", "");
+                        }}
+                        disabled={loadingPrOptions}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select head project" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {prOptions?.headProjects.map((project) => (
+                            <SelectItem
+                              key={project.fullName}
+                              value={project.fullName}
+                            >
+                              {project.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="">
+                <FormField
+                  control={form.control}
                   name="branch"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex justify-between">
-                        <div className="flex items-center">Branch name</div>
+                        <div className="flex items-center">Head branch</div>
                       </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter branch name"
-                        />
-                      </FormControl>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                        disabled={loadingPrOptions || !selectedHeadProject}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select head branch" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedHeadProject?.branches.map((branch) => (
+                            <SelectItem key={branch} value={branch}>
+                              {branch}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -148,35 +240,27 @@ export const CreatePrForm = ({ onCancel }: CreatePrProps) => {
                     <FormItem>
                       <FormLabel className="flex justify-between">
                         <div className="flex items-center">
-                          Base Branch name
+                          Base branch ({prOptions?.baseProject.fullName ?? "project"})
                         </div>
                       </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter base branch"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="">
-                <FormField
-                  control={form.control}
-                  name="githubUsername"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex justify-between">
-                        <div className="flex items-center">GitHub Username</div>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter your GitHub username"
-                        />
-                      </FormControl>
+                      <Select
+                        value={field.value || undefined}
+                        onValueChange={field.onChange}
+                        disabled={loadingPrOptions}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select base branch" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {prOptions?.baseProject.branches.map((branch) => (
+                            <SelectItem key={branch} value={branch}>
+                              {branch}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
