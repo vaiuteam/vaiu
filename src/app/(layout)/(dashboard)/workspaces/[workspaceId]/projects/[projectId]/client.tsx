@@ -505,7 +505,9 @@ export const MembersList = ({ data }: MembersListProps) => {
             ))}
           </>
         ) : (
-          <li className="hidden text-center text-sm text-muted-foreground first-of-type:block"></li>
+          <li className="text-sm text-muted-foreground">
+            No linked members yet
+          </li>
         )}
       </ul>
     </div>

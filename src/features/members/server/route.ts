@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { ID, Query } from "node-appwrite";
 import { zValidator } from "@hono/zod-validator";
 
-import { DATABASE_ID, MEMBERS_ID } from "@/config";
+import { DATABASE_ID, MEMBERS_ID, PROJECTS_ID } from "@/config";
+import type { Project } from "@/features/projects/types";
 import { createAdminClient } from "@/lib/appwrite";
 import { sessionMiddleware } from "@/lib/session-middleware";
 
@@ -116,23 +117,44 @@ const app = new Hono()
               userId: user.$id,
             });
 
-            if (!workspaceMember || workspaceMember.role !== MemberRole.ADMIN) {
+            const canViewAsWorkspaceLead =
+              workspaceMember &&
+              (workspaceMember.role === MemberRole.ADMIN ||
+                workspaceMember.role === MemberRole.SUPER_ADMIN);
+
+            if (!canViewAsWorkspaceLead) {
               return c.json({ error: "Unauthorized" }, 401);
             }
           }
         }
 
+        const project = await databases.getDocument<Project>(
+          DATABASE_ID,
+          PROJECTS_ID,
+          projectId,
+        );
+        if (project.workspaceId !== workspaceId) {
+          return c.json({ error: "Project is not in this workspace" }, 400);
+        }
+
+        const memberFilters = [
+          Query.equal("workspaceId", workspaceId),
+          project.projectAdmin
+            ? Query.or([
+                Query.contains("projectId", projectId),
+                Query.equal("$id", project.projectAdmin),
+              ])
+            : Query.contains("projectId", projectId),
+        ];
+
         const members = await databases.listDocuments<Member>(
           DATABASE_ID,
           MEMBERS_ID,
-          [
-            Query.equal("workspaceId", workspaceId),
-            Query.contains("projectId", projectId),
-          ],
+          memberFilters,
         );
 
         // Batch user lookups to improve performance
-        const userIds = members.documents.map(member => member.userId);
+        const userIds = members.documents.map((member) => member.userId);
         const usersPromises = userIds.map(userId =>
           users.get(userId).catch(error => {
             console.warn(`Failed to fetch user ${userId}:`, error);

@@ -33,8 +33,13 @@ export const ProjectMembersList = () => {
     "destructive",
   );
 
-  const { data } = useGetProjectMembers({ workspaceId, projectId });
+  const { data, isPending, isError } = useGetProjectMembers({
+    workspaceId,
+    projectId,
+  });
   const { data: project } = useGetProject({ projectId });
+
+  const members = data?.documents ?? [];
 
   const { mutate: removeProjectMember, isPending: removingMember } =
     useRemoveProjectMember();
@@ -67,7 +72,14 @@ export const ProjectMembersList = () => {
         <Separator />
       </div>
       <CardContent className="p-7">
-        {data?.documents.map((member, idx) => {
+        {isPending ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">Could not load members.</p>
+        ) : members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No members for this project.</p>
+        ) : (
+          members.map((member, idx) => {
           const isProjectAdmin = project?.projectAdmin === member.$id;
 
           return (
@@ -129,12 +141,13 @@ export const ProjectMembersList = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {idx < data.documents.length - 1 && (
+              {idx < members.length - 1 && (
                 <Separator className="my-2.5 bg-neutral-400/40" />
               )}
             </Fragment>
           );
-        })}
+        })
+        )}
       </CardContent>
     </Card>
   );
