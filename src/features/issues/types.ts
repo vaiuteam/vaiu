@@ -3,7 +3,7 @@ import { Models } from "node-appwrite";
 export type Issue = Models.Document & {
   name: string;
   status: IssueStatus;
-  assigneeId: string;
+  assigneeId: string | null;
   workspaceId: string;
   projectId: string;
   position: number;

@@ -35,6 +35,9 @@ import {
 import { IssueStatus } from "../types";
 import { useCreateTask } from "../api/use-create-task";
 
+/** Select sentinel for "no assignee" (Radix Select needs a non-empty value). */
+const UNASSIGNED = "__none__";
+
 interface CreateTaskFormProps {
   onCancel?: () => void;
   projectOptions: {
@@ -210,12 +213,12 @@ export const CreateTaskForm = ({
                 name="assigneeId"
                 render={({ field }) => (
                   <FormItem className="md:col-span-1">
-                    <FormLabel>
-                      Assignee <span className="ml-0.5 text-red-500">*</span>
-                    </FormLabel>
+                    <FormLabel>Assignee (optional)</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value ?? UNASSIGNED}
+                      onValueChange={(v) =>
+                        field.onChange(v === UNASSIGNED ? undefined : v)
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -226,6 +229,7 @@ export const CreateTaskForm = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
                         {memberOptions.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             <div className="flex items-center gap-x-2">

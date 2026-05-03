@@ -37,10 +37,12 @@ import { MemberAvatar } from "@/features/members/components/members-avatar";
 import {
   type CreateTaskSchema,
   createTaskSchema,
-} from "@/features/issues/schemas";
+} from "../schemas";
 
 import { IssueStatus, Issue } from "../types";
 import { useUpdateTask } from "../api/use-update-task";
+
+const UNASSIGNED = "__none__";
 
 interface EditTaskFormProps {
   onCancel?: () => void;
@@ -175,10 +177,16 @@ export const EditTaskForm = ({
                 name="assigneeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assignee</FormLabel>
+                    <FormLabel>Assignee (optional)</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={
+                        field.value == null || field.value === ""
+                          ? UNASSIGNED
+                          : field.value
+                      }
+                      onValueChange={(v) =>
+                        field.onChange(v === UNASSIGNED ? null : v)
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -187,6 +195,7 @@ export const EditTaskForm = ({
                       </FormControl>
                       <FormMessage />
                       <SelectContent>
+                        <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
                         {memberOptions.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             <div className="flex items-center gap-x-2">

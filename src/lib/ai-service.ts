@@ -575,7 +575,7 @@ Return a JSON response with this exact structure:
 **IMPORTANT**:
 - Return ONLY the raw JSON object, no markdown formatting, no code blocks.
 - Start directly with { and end with }.
-- Generate at least 3-5 test cases per scenario.
+- Generate no more than 20 test cases total across all scenarios.
 - Focus on the most impactful tests first.
 `;
 }

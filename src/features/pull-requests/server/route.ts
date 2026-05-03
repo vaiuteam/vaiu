@@ -12,9 +12,7 @@ import {
   getInstallationToken,
   listPullRequests,
   createPullRequest,
-  checkCollaborator,
   addIssueAssignees,
-  getAuthenticatedUser,
 } from "@/lib/github-api";
 import { createPrSchema } from "../schemas";
 import { ID, Query, type Databases } from "node-appwrite";
@@ -197,26 +195,6 @@ const app = new Hono()
       }
 
       try {
-        // Get authenticated GitHub user
-        const authenticatedGithubUser = await getAuthenticatedUser(githubToken);
-        if (!authenticatedGithubUser) {
-          return c.json({ error: "Failed to authenticate with GitHub" }, 500);
-        }
-
-        // Check if user is a collaborator on the repository
-        const isCollaborator = await checkCollaborator(
-          githubToken,
-          project.owner,
-          project.name,
-          authenticatedGithubUser.login
-        );
-
-        if (!isCollaborator) {
-          return c.json({
-            error: "You must be a collaborator on this repository to create pull requests"
-          }, 403);
-        }
-
         const createPR = await createPullRequest(
           githubToken,
           project.owner,
@@ -227,24 +205,22 @@ const app = new Hono()
           description
         );
 
-        // Add assignee and persist to database in parallel
-        await Promise.all([
-          addIssueAssignees(
-            githubToken,
-            project.owner,
-            project.name,
-            createPR.number,
-            [githubUsername]
-          ),
-          databases.createDocument(DATABASE_ID, PR_ID, ID.unique(), {
-            title,
-            description,
-            branch,
-            baseBranch,
-            githubUsername,
-            projectId,
-          })
-        ]);
+        await databases.createDocument(DATABASE_ID, PR_ID, ID.unique(), {
+          title,
+          description,
+          branch,
+          baseBranch,
+          githubUsername,
+          projectId,
+        });
+
+        await addIssueAssignees(
+          githubToken,
+          project.owner,
+          project.name,
+          createPR.number,
+          [githubUsername],
+        );
 
         return c.json(
           {

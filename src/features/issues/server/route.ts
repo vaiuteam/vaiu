@@ -27,7 +27,6 @@ import {
   listRepositoryIssues,
   updateIssue,
   createIssue,
-  checkCollaborator,
 } from "@/lib/github-api";
 
 const app = new Hono()
@@ -217,7 +216,15 @@ const app = new Hono()
       );
 
       const projectIds = issues.documents.map((issue) => issue.projectId);
-      const assigneeIds = issues.documents.map((issue) => issue.assigneeId);
+      const assigneeIds = [
+        ...new Set(
+          issues.documents
+            .map((issue) => issue.assigneeId)
+            .filter(
+              (id): id is string => typeof id === "string" && id.length > 0,
+            ),
+        ),
+      ];
 
       /* TODO: Need to be checked and verified the correct way to update the issues storing in the projects */
       // const projects = await databases.listDocuments<Project>(
@@ -285,9 +292,9 @@ const app = new Hono()
         const project = projects.documents.find(
           (project) => project && project.$id === issue.projectId,
         );
-        const assignee = assignees.find(
-          (assignee) => assignee.$id === issue.assigneeId,
-        );
+        const assignee = issue.assigneeId
+          ? assignees.find((a) => a.$id === issue.assigneeId)
+          : undefined;
         return {
           ...issue,
           project,
@@ -335,14 +342,17 @@ const app = new Hono()
           return c.json({ error: "Project not found" }, 404);
         }
 
-        const fetchAssinee = await databases.getDocument(
-          DATABASE_ID,
-          MEMBERS_ID,
-          assigneeId,
-        );
-
-        if (!fetchAssinee) {
-          return c.json({ error: "Assignee not found" }, 404);
+        const assigneeMemberId = assigneeId?.trim();
+        if (assigneeMemberId) {
+          try {
+            await databases.getDocument(
+              DATABASE_ID,
+              MEMBERS_ID,
+              assigneeMemberId,
+            );
+          } catch {
+            return c.json({ error: "Assignee not found" }, 404);
+          }
         }
 
         // Check if user is a super admin
@@ -406,20 +416,6 @@ const app = new Hono()
             return c.json({ error: "Failed to authenticate with GitHub" }, 500);
           }
 
-          // Check if user is a collaborator on the repository
-          const isCollaborator = await checkCollaborator(
-            githubToken,
-            authenticatedGithubUser.login,
-            projects.documents[0].name,
-            authenticatedGithubUser.login
-          );
-
-          if (!isCollaborator) {
-            return c.json({
-              error: "You must be a collaborator on this repository to create issues"
-            }, 403);
-          }
-
           issueInGit = await createIssue(
             githubToken,
             authenticatedGithubUser.login,
@@ -457,7 +453,7 @@ const app = new Hono()
             dueDate,
             workspaceId,
             projectId,
-            assigneeId,
+            assigneeId: assigneeMemberId ?? null,
             position: newPosition,
             number: githubNumber,
             issueType,
@@ -558,17 +554,36 @@ const app = new Hono()
         });
       }
 
+      if (assigneeId !== undefined) {
+        const next =
+          assigneeId === null || String(assigneeId).trim() === ""
+            ? null
+            : String(assigneeId).trim();
+        if (next) {
+          try {
+            await databases.getDocument(DATABASE_ID, MEMBERS_ID, next);
+          } catch {
+            return c.json({ error: "Assignee not found" }, 404);
+          }
+        }
+      }
+
       const issue = await databases.updateDocument<Issue>(
         DATABASE_ID,
         ISSUES_ID,
         issueId,
         {
-          name,
-          status,
-          dueDate,
-          projectId,
-          assigneeId,
-          description,
+          ...(name !== undefined && { name }),
+          ...(status !== undefined && { status }),
+          ...(dueDate !== undefined && { dueDate }),
+          ...(projectId !== undefined && { projectId }),
+          ...(description !== undefined && { description }),
+          ...(assigneeId !== undefined && {
+            assigneeId:
+              assigneeId === null || String(assigneeId).trim() === ""
+                ? null
+                : String(assigneeId).trim(),
+          }),
         },
       );
 
@@ -944,14 +959,6 @@ const app = new Hono()
           if (!userProjectIds.includes(projectId)) {
             return c.json(
               { error: "Unauthorized access to this project" },
-              403,
-            );
-          }
-
-          // Only project admins can fetch issues from GitHub
-          if (project.projectAdmin !== member.$id) {
-            return c.json(
-              { error: "Only project admins can fetch issues from GitHub" },
               403,
             );
           }
