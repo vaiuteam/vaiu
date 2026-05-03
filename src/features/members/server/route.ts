@@ -127,7 +127,7 @@ const app = new Hono()
           MEMBERS_ID,
           [
             Query.equal("workspaceId", workspaceId),
-            Query.equal("projectId", projectId),
+            Query.contains("projectId", projectId),
           ],
         );
 

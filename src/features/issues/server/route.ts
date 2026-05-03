@@ -19,7 +19,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { createCommentSchema, createTaskSchema } from "../schemas";
 import { Issue, IssueStatus } from "../types";
 import { Project } from "@/features/projects/types";
-import { Member } from "@/features/members/types";
+import { Member, MemberRole } from "@/features/members/types";
 import {
   getAccessToken,
   getInstallationToken,
@@ -73,9 +73,12 @@ const app = new Hono()
         return c.json({ error: "Unauthorized" }, 401);
       }
 
-      // Check if user is a member of the project
       const userProjectIds = member.projectId || [];
-      if (!userProjectIds.includes(projectId)) {
+      const isWorkspaceAdmin = member.role === MemberRole.ADMIN;
+      const isProjectAdmin = existingProject.projectAdmin === member.$id;
+      const isProjectMember = userProjectIds.includes(projectId);
+
+      if (!isWorkspaceAdmin && !isProjectAdmin && !isProjectMember) {
         return c.json({ error: "Unauthorized to delete this issue" }, 403);
       }
     }
@@ -141,7 +144,7 @@ const app = new Hono()
       // Check if user is a super admin
       const isSuper = await isSuperAdmin({ databases, userId: user.$id });
 
-      let userProjectIds: string[] = [];
+      let accessibleProjectIds: string[] = [];
 
       if (!isSuper) {
         // Regular users need to be members of the workspace
@@ -155,8 +158,18 @@ const app = new Hono()
           return c.json({ error: "Unauthorized" }, 401);
         }
 
-        // Get the projects the user is a member of
-        userProjectIds = member.projectId || [];
+        // Workspace admins can access all projects in the workspace.
+        if (member.role === "ADMIN") {
+          const allProjects = await databases.listDocuments(
+            DATABASE_ID,
+            PROJECTS_ID,
+            [Query.equal("workspaceId", workspaceId)],
+          );
+          accessibleProjectIds = allProjects.documents.map((project) => project.$id);
+        } else {
+          // Regular members can access only projects they are assigned to.
+          accessibleProjectIds = member.projectId || [];
+        }
       } else {
         // Super admins can see all projects in the workspace
         const allProjects = await databases.listDocuments(
@@ -164,11 +177,11 @@ const app = new Hono()
           PROJECTS_ID,
           [Query.equal("workspaceId", workspaceId)],
         );
-        userProjectIds = allProjects.documents.map((project) => project.$id);
+        accessibleProjectIds = allProjects.documents.map((project) => project.$id);
       }
 
       // If user is not a member of any projects, return empty result
-      if (userProjectIds.length === 0) {
+      if (accessibleProjectIds.length === 0) {
         return c.json({
           data: {
             total: 0,
@@ -185,13 +198,13 @@ const app = new Hono()
       // Filter by projects the user is a member of
       if (projectId) {
         // Check if user is a member of the requested project
-        if (!userProjectIds.includes(projectId)) {
+        if (!accessibleProjectIds.includes(projectId)) {
           return c.json({ error: "Unauthorized access to this project" }, 403);
         }
         query.push(Query.equal("projectId", projectId));
       } else {
         // Only show issues from projects the user is a member of
-        query.push(Query.contains("projectId", userProjectIds));
+        query.push(Query.equal("projectId", accessibleProjectIds));
       }
 
       if (status) {

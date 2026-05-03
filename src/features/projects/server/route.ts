@@ -827,23 +827,26 @@ const app = new Hono()
       );
     }
 
-    // Get GitHub OAuth access token from user profile
-    const githubToken = await getAccessToken(user.$id);
+    if (existingProject.projectType === "github" && existingProject.owner) {
+      // Get GitHub OAuth access token from user profile
+      const githubToken = await getAccessToken(user.$id);
 
-    if (!githubToken) {
-      return c.json({
-        error: "GitHub account not connected. Cannot delete repository."
-      }, 400);
+      if (!githubToken) {
+        return c.json({
+          error: "GitHub account not connected. Cannot delete repository."
+        }, 400);
+      }
+
+      // Delete the GitHub repository
+      const githubUser = await getAuthenticatedUser(githubToken);
+      if (!githubUser) {
+        return c.json({ error: "Failed to authenticate with GitHub" }, 500);
+      }
+
+      await deleteRepository(githubToken, githubUser.login, existingProject.name);
     }
 
-    // Delete the GitHub repository
-    const githubUser = await getAuthenticatedUser(githubToken);
-    if (!githubUser) {
-      return c.json({ error: "Failed to authenticate with GitHub" }, 500);
-    }
-
-    // TODO: delete  tasks
-    await deleteRepository(githubToken, githubUser.login, existingProject.name);
+    // Vaiu projects have no GitHub repo and should be deleted directly.
     await databases.deleteDocument(DATABASE_ID, PROJECTS_ID, projectId);
     return c.json({ data: { $id: existingProject.$id } });
   })
