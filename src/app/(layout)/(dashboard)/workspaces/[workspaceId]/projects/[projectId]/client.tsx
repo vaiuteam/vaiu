@@ -248,7 +248,7 @@ export const ProjectIdClient = () => {
           >
             Issues
           </TabsTrigger>
-          {project?.projectType === "github" && (
+          {(project.projectType === "github" || (project.projectType !== "vaiu" && !!project.owner)) && (
             <TabsTrigger
               value="pull-requests"
               className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
@@ -260,7 +260,7 @@ export const ProjectIdClient = () => {
         <TabsContent value="issues">
           <TaskViewSwitcher hideProjectFilter />
         </TabsContent>
-        {project?.projectType === "github" && (
+        {(project.projectType === "github" || (project.projectType !== "vaiu" && !!project.owner)) && (
           <TabsContent value="pull-requests">
             <PrViewSwitcher />
           </TabsContent>

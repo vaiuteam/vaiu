@@ -1,7 +1,8 @@
 "use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
 
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,72 +82,57 @@ export const CreateTaskForm = ({
 
   return (
     <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
-      <CardHeader className="flex p-5">
-        <CardTitle className="text-xl font-bold">Create new issue</CardTitle>
-        {/* Keep header descriptions consistent with other forms */}
+      <CardHeader className="flex p-6 pb-4">
+        <CardTitle className="text-2xl font-bold">Create new issue</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Create a new issue and assign it to a project
+          Add the details below. Description supports multiple paragraphs and code blocks.
         </p>
       </CardHeader>
-      <div className="px-5">
+      <div className="px-6">
         <Separator className="bg-border/55" />
       </div>
-      <CardContent className="p-5">
+      <CardContent className="p-6 pt-5">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="issueType"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormLabel>
-                      Issue Type <span className="ml-0.5 text-red-500">*</span>
+                      Issue type <span className="ml-0.5 text-red-500">*</span>
                     </FormLabel>
-                    <div
-                      className="rounded-2xl border border-border/70 bg-muted/35 p-1.5 shadow-inner dark:bg-muted/25"
-                      role="radiogroup"
-                      aria-label="Issue type"
+                    <Select
+                      value={field.value ?? "github"}
+                      onValueChange={field.onChange}
+                      disabled={isPending}
                     >
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(["vaiu", "github"] as const).map((t) => {
-                          const selected = field.value === t;
-                          const label =
-                            t === "vaiu" ? "Vaiu Issue" : "Github Issue";
-                          return (
-                            <button
-                              key={t}
-                              type="button"
-                              role="radio"
-                              aria-checked={selected}
-                              onClick={() => field.onChange(t)}
-                              className={cn(
-                                "relative flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                                selected
-                                  ? "bg-background font-semibold text-foreground shadow-md ring-2 ring-primary/55 dark:bg-background/90"
-                                  : "text-muted-foreground hover:bg-background/40 hover:text-foreground",
-                              )}
-                            >
-                              <span
-                                className="flex size-4 shrink-0 items-center justify-center"
-                                aria-hidden
-                              >
-                                {selected ? (
-                                  <Check
-                                    className="size-4 text-primary"
-                                    strokeWidth={2.5}
-                                  />
-                                ) : null}
-                              </span>
-                              <span className="text-left leading-tight">
-                                {label}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose issue type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="github">
+                          <span className="inline-flex items-center gap-2">
+                            <FaGithub className="h-4 w-4" />
+                            GitHub issue
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="vaiu">
+                          <span className="inline-flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            Vaiu issue
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {field.value === "vaiu"
+                        ? "A Vaiu issue is tracked only in this workspace and isn’t synced to GitHub."
+                        : "A GitHub issue will be created on the linked repository and stays in sync with GitHub."}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -155,7 +141,7 @@ export const CreateTaskForm = ({
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem className="md:col-span-2">
                     <FormLabel>
                       Issue name <span className="ml-0.5 text-red-500">*</span>
                     </FormLabel>
@@ -173,7 +159,7 @@ export const CreateTaskForm = ({
                 control={form.control}
                 name="description"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem className="md:col-span-2">
                     <FormLabel>
                       Issue Description{" "}
                       <span className="ml-0.5 text-red-500">*</span>
@@ -181,9 +167,9 @@ export const CreateTaskForm = ({
                     <FormControl>
                       <Textarea
                         {...field}
-                        placeholder="Enter Description"
-                        rows={4}
-                        className="min-h-[100px] rounded-2xl border border-border/70 bg-background/50 px-3 py-2 text-sm shadow-none backdrop-blur-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-border dark:bg-background/35"
+                        placeholder="Describe what needs to be done. Add steps to reproduce, expected behavior, or any context. Markdown-style line breaks are preserved."
+                        rows={10}
+                        className="min-h-[220px] resize-y rounded-2xl border border-border/70 bg-background/50 px-4 py-3 text-sm leading-relaxed shadow-none backdrop-blur-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 dark:border-border dark:bg-background/35"
                       />
                     </FormControl>
                     <FormMessage />

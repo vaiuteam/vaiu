@@ -6,7 +6,7 @@ import { EditTaskFormWrapper } from "./edit-task-form-wrapper";
 export const EditTaskModal = () => {
   const { taskId, close } = useEditTaskModal();
   return (
-    <ResponsiveModal open={!!taskId} onOpenChange={close}>
+    <ResponsiveModal open={!!taskId} onOpenChange={close} size="2xl" title="Edit issue">
       {taskId && <EditTaskFormWrapper id={taskId} onCancel={close} />}
     </ResponsiveModal>
   );

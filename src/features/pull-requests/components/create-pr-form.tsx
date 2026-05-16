@@ -104,58 +104,50 @@ export const CreatePrForm = ({ onCancel }: CreatePrProps) => {
 
   return (
     <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
-      <CardHeader className="flex p-7">
-        <CardTitle className="text-xl font-bold">
-          Create a pull request
-        </CardTitle>
-        <CardDescription className="">
-          To create a PR you need to push the changes first to your branch.
+      <CardHeader className="flex p-6 pb-4">
+        <CardTitle className="text-2xl font-bold">Create a pull request</CardTitle>
+        <CardDescription>
+          Push your branch first, then describe the change here. Reviewers will see this exact text on GitHub.
         </CardDescription>
       </CardHeader>
-      <div className="px-7">
+      <div className="px-6">
         <Separator className="bg-border/55" />
       </div>
-      <CardContent className="p-7">
+      <CardContent className="p-6 pt-5">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex justify-between">
-                      <div className="flex items-center">Title</div>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter title"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="flex flex-col gap-y-4">
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pull request description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Enter pull request description"
-                        className="rounded-2xl border border-border/70 bg-background/50 shadow-none backdrop-blur-sm dark:border-border dark:bg-background/35"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter title" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pull request description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="What changed and why. Mention related issues with #123."
+                      rows={10}
+                      className="min-h-[220px] resize-y rounded-2xl border border-border/70 bg-background/50 px-4 py-3 text-sm leading-relaxed shadow-none backdrop-blur-sm focus-visible:ring-1 focus-visible:ring-ring dark:border-border dark:bg-background/35"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="">
                 <FormField
                   control={form.control}

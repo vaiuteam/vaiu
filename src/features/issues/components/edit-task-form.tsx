@@ -81,12 +81,16 @@ export const EditTaskForm = ({
   });
 
   const status = form.watch("status");
+  const initialStatus = initialValues.status;
 
+  // Only prompt for a comment when the user *transitions* an issue into DONE.
+  // Without this, opening the edit dialog on an already-done issue would
+  // open the comment dialog on mount because status === "DONE" on first render.
   useEffect(() => {
-    if (status === "DONE") {
+    if (status === "DONE" && initialStatus !== "DONE") {
       setIsDoneDialogOpen(true);
     }
-  }, [status]);
+  }, [status, initialStatus]);
 
   const onSubmit = (values: CreateTaskSchema) => {
     const valuesWithComment = {
@@ -106,21 +110,24 @@ export const EditTaskForm = ({
 
   return (
     <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">
-      <CardHeader className="flex p-7">
-        <CardTitle className="text-xl font-bold">Edit a task</CardTitle>
+      <CardHeader className="flex p-6 pb-4">
+        <CardTitle className="text-2xl font-bold">Edit issue</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Update properties below. Edit the description from the issue page.
+        </p>
       </CardHeader>
-      <div className="px-7">
+      <div className="px-6">
         <Separator className="bg-border/55" />
       </div>
-      <CardContent className="p-7">
+      <CardContent className="p-6 pt-5">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="flex flex-col gap-y-4 mb-8">
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Issue name</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Enter issue name" />
@@ -280,18 +287,19 @@ export const EditTaskForm = ({
                 )}
               />
             </div>
-            <div className="flex items-center justify-between">
+            <Separator className="my-4 bg-border/55" />
+            <div className="flex items-center justify-between gap-4">
               <Button
                 type="button"
                 size="lg"
                 variant="secondary"
                 onClick={onCancel}
                 disabled={isPending}
-                className={cn(!onCancel && "invisible", "rounded-2xl")}
+                className={cn(!onCancel && "invisible", "w-1/2 rounded-2xl")}
               >
                 Cancel
               </Button>
-              <Button disabled={isPending} type="submit" size="lg" className="rounded-2xl">
+              <Button disabled={isPending} type="submit" size="lg" className="w-1/2 rounded-2xl">
                 Save Changes
               </Button>
             </div>
