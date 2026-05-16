@@ -61,8 +61,8 @@ const app = new Hono()
                         roomsPerWorkspace: freeLimits.roomsPerWorkspace,
                         aiCredits: freeLimits.aiCredits,
                         aiCreditsPerUser: freeLimits.aiCreditsPerUser,
-                        monthlyPrice: freePricing.monthly,
-                        yearlyPrice: freePricing.yearly,
+                        price: freePricing.monthly, // FREE is 0 either way
+                        currency: freePricing.currency,
                         durationDays: freeLimits.durationDays,
                     }
                 );
@@ -132,26 +132,35 @@ const app = new Hono()
                     userId: user.$id,
                 });
 
-                const razorpayPlanIds: Record<string, string> = {
-                    "PRO_MONTHLY": process.env.RAZORPAY_PLAN_PRO_MONTHLY || "plan_PRO_MONTHLY",
-                    "PRO_YEARLY": process.env.RAZORPAY_PLAN_PRO_YEARLY || "plan_PRO_YEARLY",
-                    "STANDARD_MONTHLY": process.env.RAZORPAY_PLAN_STANDARD_MONTHLY || "plan_STANDARD_MONTHLY",
-                    "STANDARD_YEARLY": process.env.RAZORPAY_PLAN_STANDARD_YEARLY || "plan_STANDARD_YEARLY",
+                const razorpayPlanIds: Record<string, string | undefined> = {
+                    "PRO_MONTHLY": process.env.RAZORPAY_PLAN_PRO_MONTHLY,
+                    "PRO_YEARLY": process.env.RAZORPAY_PLAN_PRO_YEARLY,
+                    "STANDARD_MONTHLY": process.env.RAZORPAY_PLAN_STANDARD_MONTHLY,
+                    "STANDARD_YEARLY": process.env.RAZORPAY_PLAN_STANDARD_YEARLY,
                 };
 
                 const planKey = `${plan}_${billingCycle}`;
                 const razorpayPlanId = razorpayPlanIds[planKey];
 
                 if (!razorpayPlanId) {
-                    return c.json({ error: "Invalid plan selected" }, 400);
+                    console.error(
+                        `Razorpay plan ID not configured for ${planKey}. Set env var RAZORPAY_PLAN_${planKey}.`
+                    );
+                    return c.json(
+                        { error: "Subscription plan not configured. Please contact support." },
+                        500
+                    );
                 }
 
-                // Create Razorpay subscription
+                // Razorpay caps total_count at 12 for yearly and 120 for monthly.
+                // Pick the max so subscriptions don't silently terminate.
                 const razorpaySubscription = await createRazorpaySubscription(
                     razorpayPlanId,
                     undefined,
-                    billingCycle === "MONTHLY" ? 12 : 1
-                );                // Calculate period dates
+                    billingCycle === "MONTHLY" ? 120 : 12
+                );
+
+                // Calculate period dates
                 const startDate = new Date();
                 const endDate = new Date();
                 if (billingCycle === "MONTHLY") {
@@ -204,8 +213,8 @@ const app = new Hono()
                         roomsPerWorkspace: planLimits.roomsPerWorkspace,
                         aiCredits: planLimits.aiCredits,
                         aiCreditsPerUser: planLimits.aiCreditsPerUser,
-                        monthlyPrice: planPricing.monthly,
-                        yearlyPrice: planPricing.yearly,
+                        price: billingCycle === "MONTHLY" ? planPricing.monthly : planPricing.yearly,
+                        currency: planPricing.currency,
                         durationDays: planLimits.durationDays,
                     }
                 );

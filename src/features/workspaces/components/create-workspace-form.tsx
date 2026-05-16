@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
-import Image from "next/image";
-import { ImageIcon } from "lucide-react";
+// import Image from "next/image";
+// import { ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 import { useCreateWorkspace } from "../api/use-create-workspace";
@@ -31,7 +31,7 @@ interface CreateWorkspaceFormProps {
 export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
   const router = useRouter();
   const { mutate, isPending } = useCreateWorkspace();
-  const inputRef = useRef<HTMLInputElement>(null);
+  // const inputRef = useRef<HTMLInputElement>(null);
   const form = useForm<CreateWorkspaceSchema>({
     resolver: zodResolver(createWorkspaceSchema),
     defaultValues: {
@@ -120,6 +120,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                   </FormItem>
                 )}
               />
+              {/* Image upload hidden for now
               <FormField
                 control={form.control}
                 name="image"
@@ -140,9 +141,9 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                           />
                         </div>
                       ) : (
-                          <Avatar className="size-[72px]">
-                            <AvatarFallback className="bg-muted/70">
-                              <ImageIcon className="size-[36px] text-muted-foreground" />
+                        <Avatar className="size-[72px]">
+                          <AvatarFallback className="bg-muted/70">
+                            <ImageIcon className="size-[36px] text-muted-foreground" />
                           </AvatarFallback>
                         </Avatar>
                       )}
@@ -190,6 +191,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                   </div>
                 )}
               />
+              */}
             </div>
             <div className="mt-6 flex w-full items-center justify-between gap-4">
               <Button

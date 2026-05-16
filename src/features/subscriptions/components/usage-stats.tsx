@@ -5,13 +5,37 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Subscription, UserUsage, PLAN_LIMITS, SubscriptionPlan } from "../types";
 
+const formatLimit = (value: number) => (value === -1 ? "∞" : value.toString());
+
+const sumPerWorkspaceCredits = (
+    raw: UserUsage["aiCreditsPerWorkspace"] | string | undefined,
+): number => {
+    if (!raw) return 0;
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return Object.values(parsed as Record<string, number>).reduce(
+        (a, b) => a + Number(b || 0),
+        0,
+    );
+};
+
 interface UsageStatsProps {
     subscription: Subscription;
     usage: UserUsage;
 }
 
 export const UsageStats = ({ subscription, usage }: UsageStatsProps) => {
-    const limits = PLAN_LIMITS[subscription.plan];
+    const planDefaults = PLAN_LIMITS[subscription.plan];
+    // Prefer limits stored on the subscription doc (so grandfathered plans
+    // render their actual numbers), falling back to the plan defaults.
+    const limits = {
+        workspaces: subscription.workspaces ?? planDefaults.workspaces,
+        projectsPerWorkspace: subscription.projectsPerWorkspace ?? planDefaults.projectsPerWorkspace,
+        membersPerWorkspace: subscription.membersPerWorkspace ?? planDefaults.membersPerWorkspace,
+        roomsPerWorkspace: subscription.roomsPerWorkspace ?? planDefaults.roomsPerWorkspace,
+        aiCredits: subscription.aiCredits ?? planDefaults.aiCredits,
+        aiCreditsPerUser: subscription.aiCreditsPerUser ?? planDefaults.aiCreditsPerUser,
+        durationDays: subscription.durationDays ?? planDefaults.durationDays,
+    };
 
     const getUsagePercentage = (current: number, limit: number) => {
         if (limit === -1) return 0;
@@ -51,38 +75,43 @@ export const UsageStats = ({ subscription, usage }: UsageStatsProps) => {
                     )}
                 </div>
 
-                {/* Projects */}
+                {/* Projects — limit is per workspace, not a global total */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Projects (Total)</span>
+                        <span className="font-medium">Projects</span>
                         <span className="text-muted-foreground">
-                            {Object.values(usage.projectsCount).reduce((a, b) => a + b, 0)} across workspaces
+                            {Object.values(usage.projectsCount).reduce((a, b) => a + b, 0)} total · limit {formatLimit(limits.projectsPerWorkspace)} per workspace
                         </span>
                     </div>
                 </div>
 
-                {/* Rooms */}
+                {/* Rooms — same per-workspace limit shape */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Rooms (Total)</span>
+                        <span className="font-medium">Rooms</span>
                         <span className="text-muted-foreground">
-                            {usage.roomsCount ? Object.values(usage.roomsCount).reduce((a, b) => a + b, 0) : 0} across workspaces
+                            {usage.roomsCount ? Object.values(usage.roomsCount).reduce((a, b) => a + b, 0) : 0} total · limit {formatLimit(limits.roomsPerWorkspace)} per workspace
                         </span>
                     </div>
                 </div>
 
-                {/* AI Credits */}
+                {/* AI Credits — show this period's per-user usage against the per-user quota */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">AI Credits Used</span>
+                        <span className="font-medium">AI Credits This Period</span>
                         <span className="text-muted-foreground">
-                            {usage.aiCreditsUsed} / {limits.aiCredits}
+                            {sumPerWorkspaceCredits(usage.aiCreditsPerWorkspace)} / {formatLimit(limits.aiCreditsPerUser)} per user
                         </span>
                     </div>
-                    <Progress
-                        value={getUsagePercentage(usage.aiCreditsUsed, limits.aiCredits)}
-                        className={getUsageColor(getUsagePercentage(usage.aiCreditsUsed, limits.aiCredits))}
-                    />
+                    {limits.aiCreditsPerUser !== -1 && (
+                        <Progress
+                            value={getUsagePercentage(sumPerWorkspaceCredits(usage.aiCreditsPerWorkspace), limits.aiCreditsPerUser)}
+                            className={getUsageColor(getUsagePercentage(sumPerWorkspaceCredits(usage.aiCreditsPerWorkspace), limits.aiCreditsPerUser))}
+                        />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                        Workspace pool: {formatLimit(limits.aiCredits)} credits / month
+                    </p>
                 </div>
 
                 {/* Subscription Period */}

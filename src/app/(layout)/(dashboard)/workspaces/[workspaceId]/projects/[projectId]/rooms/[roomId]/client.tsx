@@ -6,7 +6,7 @@
 // import { useRoomId } from "@/features/channels/hooks/use-roomId";
 // import { useProjectId } from "@/features/projects/hooks/use-projectId";
 // import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
-// import { redirect, useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 // import { useEffect } from "react";
 // import { toast } from "sonner";
 
@@ -54,7 +54,7 @@ import { useGetRoom } from "@/features/channels/api/use-get-room";
 import { useRoomId } from "@/features/channels/hooks/use-roomId";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -63,29 +63,32 @@ export const RoomId = () => {
   const projectId = useProjectId();
   const roomId = useRoomId();
   const { data: current } = useCurrent();
-  const { data: room } = useGetRoom({ roomId: roomId || "" });
+  const { data: room, isFetched } = useGetRoom({ roomId: roomId || "" });
   const router = useRouter();
 
   useEffect(() => {
-    if (!current) {
-      redirect("/sign-in");
+    if (current === null) {
+      router.push("/sign-in");
     }
-  }, [current]);
+  }, [current, router]);
 
   useEffect(() => {
     if (!projectId.trim() || projectId === "undefined") {
       toast.error("Please select your project to join the room");
-      redirect(`/workspaces/${workspaceId}`);
+      router.push(`/workspaces/${workspaceId}`);
     }
-  }, [projectId, workspaceId]);
+  }, [projectId, workspaceId, router]);
 
+  // Only redirect once the query has actually resolved with no room.
+  // Otherwise the loading state (`room === undefined`) would bounce the
+  // user back to the project page on the very first click.
   useEffect(() => {
-    if (!room && roomId) {
+    if (isFetched && !room && roomId) {
       router.push(`/workspaces/${workspaceId}/projects/${projectId}`);
     }
-  }, [room, roomId, router, workspaceId, projectId]);
+  }, [isFetched, room, roomId, router, workspaceId, projectId]);
 
-  if (!room || !roomId) {
+  if (!roomId || !room) {
     return null;
   }
 

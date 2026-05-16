@@ -30,6 +30,7 @@ import { endOfMonth, startOfMonth, subMonths } from "date-fns";
 import { IssueStatus } from "@/features/issues/types";
 import { Project } from "@/features/projects/types";
 import { checkSubscriptionLimit } from "@/features/subscriptions";
+import { checkMemberLimit } from "@/lib/subscription-middleware";
 
 const app = new Hono()
   .get("/", sessionMiddleware, async (c) => {
@@ -892,6 +893,7 @@ const app = new Hono()
     "/:workspaceId/join",
     sessionMiddleware,
     zValidator("json", inviteCodeSchema),
+    checkMemberLimit,
     async (c) => {
       const { workspaceId } = c.req.param();
       const { code } = c.req.valid("json");

@@ -29,6 +29,41 @@ export const checkWorkspaceLimit = async (c: Context, next: Next) => {
     await next();
 };
 
+export const checkMemberLimit = async (c: Context, next: Next) => {
+    const databases = c.get("databases");
+    const user = c.get("user");
+
+    const workspaceId = c.req.param("workspaceId");
+
+    if (!workspaceId) {
+        return c.json({ error: "Workspace ID is required" }, 400);
+    }
+
+    const limitCheck = await checkSubscriptionLimit({
+        databases,
+        userId: user.$id,
+        limitType: "members",
+        workspaceId,
+    });
+
+    if (!limitCheck.allowed) {
+        return c.json(
+            {
+                error: "Member limit reached",
+                details: {
+                    limit: limitCheck.limit,
+                    current: limitCheck.current,
+                    plan: limitCheck.plan,
+                    message: `This workspace has reached the maximum number of members (${limitCheck.limit}) for its ${limitCheck.plan} plan. The workspace owner needs to upgrade to invite more members.`,
+                },
+            },
+            403
+        );
+    }
+
+    await next();
+};
+
 export const checkProjectLimit = async (c: Context, next: Next) => {
     const databases = c.get("databases");
     const user = c.get("user");

@@ -248,19 +248,23 @@ export const ProjectIdClient = () => {
           >
             Issues
           </TabsTrigger>
-          <TabsTrigger
-            value="pull-requests"
-            className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
-          >
-            Pull Requests
-          </TabsTrigger>
+          {project?.projectType === "github" && (
+            <TabsTrigger
+              value="pull-requests"
+              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
+            >
+              Pull Requests
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="issues">
           <TaskViewSwitcher hideProjectFilter />
         </TabsContent>
-        <TabsContent value="pull-requests">
-          <PrViewSwitcher />
-        </TabsContent>
+        {project?.projectType === "github" && (
+          <TabsContent value="pull-requests">
+            <PrViewSwitcher />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Readme Display */}

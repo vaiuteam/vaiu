@@ -8,7 +8,7 @@ import { Navbar } from "@/components/mainNavbar";
 import Footer from "@/components/Footer";
 import BentoGrid from "@/components/BentoGrid";
 // import Testimonials from "@/components/Testimonials";
-// import Pricing from "@/components/Pricing";
+import Pricing from "@/components/Pricing";
 
 export default async function Home() {
   const current = await getCurrent();
@@ -21,7 +21,7 @@ export default async function Home() {
         {/* <Features /> */}
         <BentoGrid />
         {/* <Testimonials /> */}
-        {/* <Pricing /> */}
+        <Pricing />
         <Footer />
       </div>
     );
