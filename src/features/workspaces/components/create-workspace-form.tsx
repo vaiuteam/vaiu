@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+// import { useRef } from "react";
 // import Image from "next/image";
 // import { ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -56,12 +56,13 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
       },
     );
   };
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form.setValue("image", file);
-    }
-  };
+
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     form.setValue("image", file);
+  //   }
+  // };
 
   return (
     <Card className="size-full border-none bg-card shadow-none backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--surface-elevated))] dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.8)]">

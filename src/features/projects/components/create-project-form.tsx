@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 // import Image from "next/image";
 import Link from "next/link";
 import { Loader2, Github, Sparkles } from "lucide-react";
@@ -123,18 +123,18 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     );
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form1.setValue("image", file);
-    }
-  };
-  const handleImageChangeForEp = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form2.setValue("image", file);
-    }
-  };
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     form1.setValue("image", file);
+  //   }
+  // };
+  // const handleImageChangeForEp = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     form2.setValue("image", file);
+  //   }
+  // };
 
   return (
     <Tabs defaultValue="create-new-project" className="w-full px-6 py-8">
