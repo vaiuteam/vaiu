@@ -7,13 +7,23 @@ import { Workspace } from "@/features/workspaces/types";
 
 import { PageError } from "@/components/page-error";
 import { Loader } from "@/components/page-loader";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { MemberRole } from "@/features/members/types";
 
 export const WorkspaceIdSettingsClient = () => {
   const workspaceId = useWorkspaceId();
   const { data: initialValues, isLoading } = useGetWorkspace({ workspaceId });
+  const { data: currentWorkspaceMember, isLoading: memberLoading } =
+    useCurrentWorkspaceMember(workspaceId);
+  const isWorkspaceAdmin =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
 
-  if (isLoading) return <Loader />;
+  if (isLoading || memberLoading) return <Loader />;
   if (!initialValues) return <PageError message="Workspace not found" />;
+  if (!isWorkspaceAdmin) {
+    return <PageError message="You do not have access to workspace settings." />;
+  }
 
   return (
     <div className="flex w-full flex-col gap-6 lg:max-w-xl">

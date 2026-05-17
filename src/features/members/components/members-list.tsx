@@ -21,7 +21,8 @@ import { useUpdateMember } from "@/features/members/api/use-update-member";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { MemberAvatar } from "@/features/members/components/members-avatar";
 import { useConfirm } from "@/hooks/use-confirm";
-import { useCurrent } from "@/features/auth/api/use-curent";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { PageError } from "@/components/page-error";
 
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
@@ -32,17 +33,19 @@ export const MembersList = () => {
   );
 
   const { data } = useGetMembers({ workspaceId });
-  const { data: currentUser } = useCurrent();
-
+  const { data: currentWorkspaceMember } = useCurrentWorkspaceMember(workspaceId);
   const { mutate: deleteMember, isPending: deletingMember } = useDeleteMember();
   const { mutate: updateMember, isPending: updatingMember } = useUpdateMember();
 
-  const currentMember = data?.documents.find(
-    (m) => m.userId === currentUser?.$id,
-  );
-  const isAdmin =
-    currentMember?.role === MemberRole.ADMIN ||
-    currentMember?.role === MemberRole.SUPER_ADMIN;
+  const canManageMembers =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
+
+  if (data && !canManageMembers) {
+    return <PageError message="You do not have access to workspace members." />;
+  }
+
+  const isAdmin = canManageMembers;
 
   const handleUpdateMember = (memberId: string, role: MemberRole) => {
     updateMember({ param: { memberId }, json: { role } });

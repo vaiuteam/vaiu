@@ -2,7 +2,8 @@ import { Query } from "node-appwrite";
 
 import { DATABASE_ID, MEMBERS_ID, WORKSPACE_ID } from "@/config";
 import { createSessionClient } from "@/lib/appwrite";
-import { isSuperAdmin } from "@/features/members/utilts";
+import { getMember, isSuperAdmin } from "@/features/members/utilts";
+import { MemberRole } from "@/features/members/types";
 
 export const getWorkspaces = async () => {
   const { account, databases } = await createSessionClient();
@@ -34,4 +35,15 @@ export const getWorkspaces = async () => {
   ]);
 
   return workspaces;
+};
+
+export const canManageWorkspace = async (workspaceId: string) => {
+  const { account, databases } = await createSessionClient();
+  const user = await account.get();
+
+  const isSuper = await isSuperAdmin({ databases, userId: user.$id });
+  if (isSuper) return true;
+
+  const member = await getMember({ databases, workspaceId, userId: user.$id });
+  return member?.role === MemberRole.ADMIN;
 };

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
+import { useGetProject } from "@/features/projects/api/use-get-project";
 import { useCreateTaskModal } from "../hooks/use-create-task-modal";
 import { useTaskFilter } from "../hooks/use-task-filter";
 import { useGetIssues } from "../api/use-get-tasks";
@@ -38,6 +39,14 @@ export const TaskViewSwitcher = ({
   const { open } = useCreateTaskModal();
   const workspaceId = useWorkspaceId();
   const paramProjectId = useProjectId();
+  const { data: routeProject } = useGetProject({
+    projectId: paramProjectId ?? "",
+    enabled: Boolean(paramProjectId),
+  });
+  const showGithubSync =
+    Boolean(paramProjectId) &&
+    routeProject != null &&
+    routeProject.projectType !== "vaiu";
   const { mutate: bulkUpdate } = useBulkUpdateTasks();
   const { mutate: syncIssues, isPending: isSyncing } = useFetchIssues();
 
@@ -82,7 +91,7 @@ export const TaskViewSwitcher = ({
             Issues
           </p>
           <div className="flex items-center gap-2">
-            {paramProjectId && (
+            {showGithubSync && (
               <Button
                 size={"sm"}
                 onClick={handleSyncWithGitHub}

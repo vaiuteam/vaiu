@@ -39,8 +39,11 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { IssueStatus } from "@/features/issues/types";
 import { Member } from "@/features/members/types";
+import { MemberRole } from "@/features/members/types";
 
 import Link from "next/link";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { PageError } from "@/components/page-error";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
 
@@ -83,6 +86,16 @@ const TABS: TabConfig[] = [
 export const WorkspaceAnalyticsClient = () => {
   const workspaceId = useWorkspaceId();
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const { data: currentWorkspaceMember, isLoading: memberLoading } =
+    useCurrentWorkspaceMember(workspaceId);
+  const isWorkspaceAdmin =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
+
+  if (memberLoading) return null;
+  if (!isWorkspaceAdmin) {
+    return <PageError message="You do not have access to workspace analytics." />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {

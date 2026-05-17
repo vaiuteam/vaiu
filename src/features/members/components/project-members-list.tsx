@@ -23,8 +23,8 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { useGetProjectMembers } from "../api/use-get-project-members";
 import { useGetProject } from "@/features/projects/api/use-get-project";
-import { useCurrent } from "@/features/auth/api/use-curent";
-import { useGetMembers } from "@/features/members/api/use-get-members";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { PageError } from "@/components/page-error";
 
 export const ProjectMembersList = () => {
   const workspaceId = useWorkspaceId();
@@ -40,22 +40,21 @@ export const ProjectMembersList = () => {
     projectId,
   });
   const { data: project } = useGetProject({ projectId });
-  const { data: currentUser } = useCurrent();
-  const { data: workspaceMembers } = useGetMembers({ workspaceId });
-
-  const currentMember = workspaceMembers?.documents.find(
-    (m) => m.userId === currentUser?.$id,
-  );
-  const isAdmin =
-    currentMember?.role === MemberRole.ADMIN ||
-    currentMember?.role === MemberRole.SUPER_ADMIN ||
-    project?.projectAdmin === currentMember?.$id;
-
-  const members = data?.documents ?? [];
-
+  const { data: currentWorkspaceMember } = useCurrentWorkspaceMember(workspaceId);
   const { mutate: removeProjectMember, isPending: removingMember } =
     useRemoveProjectMember();
   const { mutate: updateMember, isPending: updatingMember } = useUpdateMember();
+
+  const members = data?.documents ?? [];
+  const canManageMembers =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
+
+  if (!isPending && !isError && !canManageMembers) {
+    return <PageError message="You do not have access to project members." />;
+  }
+
+  const isAdmin = canManageMembers;
 
   const handleUpdateMember = (memberId: string, role: MemberRole) => {
     updateMember({ param: { memberId }, json: { role } });

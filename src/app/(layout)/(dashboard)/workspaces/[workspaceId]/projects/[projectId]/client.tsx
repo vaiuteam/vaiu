@@ -44,6 +44,8 @@ import { HoverCard } from "@/components/ui/hover-card";
 import { HoverCardContent, HoverCardTrigger } from "@radix-ui/react-hover-card";
 import Image from "next/image";
 import { useGetProjectMembers } from "@/features/members/api/use-get-project-members";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { MemberRole } from "@/features/members/types";
 
 export const ProjectIdClient = () => {
   const projectId = useProjectId();
@@ -64,6 +66,11 @@ export const ProjectIdClient = () => {
     workspaceId,
     projectId,
   });
+
+  const { data: currentWorkspaceMember } = useCurrentWorkspaceMember(workspaceId);
+  const canManageProject =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
 
   const isLoading = projectsLoading || analyticsLoading || membersLoading;
 
@@ -171,7 +178,9 @@ export const ProjectIdClient = () => {
               <SourceTypeBadge type={project.projectType} kind="project" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Issues, pull requests, docs, and collaboration in one place.
+              {project.projectType === "vaiu"
+                ? "Issues, docs, and collaboration in one place."
+                : "Issues, pull requests, docs, and collaboration in one place."}
             </p>
           </div>
           {project.projectType !== "vaiu" && project.owner && (
@@ -204,13 +213,15 @@ export const ProjectIdClient = () => {
                 <UploadIcon className="h-4 w-4" />
                 Upload README
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={openCollaboratorModal}
-                className="gap-2"
-              >
-                <UserPlus2 className="h-4 w-4" />
-                Add collaborator
-              </DropdownMenuItem>
+              {project.projectType !== "vaiu" && canManageProject && (
+                <DropdownMenuItem
+                  onSelect={openCollaboratorModal}
+                  className="gap-2"
+                >
+                  <UserPlus2 className="h-4 w-4" />
+                  Add collaborator
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => navigateTo(userManagementUrl)}
@@ -240,32 +251,32 @@ export const ProjectIdClient = () => {
 
       {analytics && <Analytics data={analytics} />}
 
-      <Tabs defaultValue="issues" className="w-full">
-        <TabsList className="h-11 w-full overflow-hidden rounded-2xl bg-background/45 p-1 backdrop-blur-sm lg:w-auto">
-          <TabsTrigger
-            value="issues"
-            className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
-          >
-            Issues
-          </TabsTrigger>
-          {(project.projectType === "github" || (project.projectType !== "vaiu" && !!project.owner)) && (
+      {project.projectType === "vaiu" ? (
+        <TaskViewSwitcher hideProjectFilter />
+      ) : (
+        <Tabs defaultValue="issues" className="w-full">
+          <TabsList className="h-11 w-full overflow-hidden rounded-2xl bg-background/45 p-1 backdrop-blur-sm lg:w-auto">
+            <TabsTrigger
+              value="issues"
+              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
+            >
+              Issues
+            </TabsTrigger>
             <TabsTrigger
               value="pull-requests"
               className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
             >
               Pull Requests
             </TabsTrigger>
-          )}
-        </TabsList>
-        <TabsContent value="issues">
-          <TaskViewSwitcher hideProjectFilter />
-        </TabsContent>
-        {(project.projectType === "github" || (project.projectType !== "vaiu" && !!project.owner)) && (
+          </TabsList>
+          <TabsContent value="issues">
+            <TaskViewSwitcher hideProjectFilter />
+          </TabsContent>
           <TabsContent value="pull-requests">
             <PrViewSwitcher />
           </TabsContent>
-        )}
-      </Tabs>
+        </Tabs>
+      )}
 
       {/* Readme Display */}
       {isLoading ? (

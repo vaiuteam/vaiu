@@ -130,7 +130,7 @@ export const EditTaskForm = ({
                   <FormItem className="md:col-span-2">
                     <FormLabel>Issue name</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter issue name" />
+                      <Input {...field} placeholder="Enter issue title" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

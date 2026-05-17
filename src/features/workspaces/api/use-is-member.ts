@@ -24,3 +24,23 @@ export const useIsMember = (workspaceId: string) => {
 
   return query;
 };
+
+export const useCurrentWorkspaceMember = (workspaceId: string) => {
+  const query = useQuery({
+    queryKey: ["current-workspace-member", workspaceId],
+    queryFn: async () => {
+      const response = await client.api.v1.workspaces[":workspaceId"][
+        "isworkspacemember"
+      ].$get({
+        param: { workspaceId },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch current workspace member");
+      const { data } = await response.json();
+      return data.member;
+    },
+    enabled: !!workspaceId,
+  });
+
+  return query;
+};

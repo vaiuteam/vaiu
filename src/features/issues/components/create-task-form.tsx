@@ -1,5 +1,7 @@
 "use client";
-import { useForm } from "react-hook-form";
+
+import { useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Sparkles } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
@@ -27,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
+import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
 import { MemberAvatar } from "@/features/members/components/members-avatar";
 import {
@@ -46,6 +49,7 @@ interface CreateTaskFormProps {
     id: string;
     name: string;
     imageUrl: string;
+    projectType: "vaiu" | "github";
   }[];
   memberOptions: {
     id: string;
@@ -59,6 +63,7 @@ export const CreateTaskForm = ({
   projectOptions,
 }: CreateTaskFormProps) => {
   const workspaceId = useWorkspaceId();
+  const routeProjectId = useProjectId();
   const { mutate, isPending } = useCreateTask();
   const form = useForm<CreateTaskSchema>({
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true })),
@@ -67,6 +72,28 @@ export const CreateTaskForm = ({
       issueType: "github",
     },
   });
+
+  const selectedProjectId = useWatch({ control: form.control, name: "projectId" });
+  const selectedProject = projectOptions.find((p) => p.id === selectedProjectId);
+  const showGithubIssueOption =
+    !selectedProject || selectedProject.projectType !== "vaiu";
+
+  useEffect(() => {
+    if (!routeProjectId) return;
+    const exists = projectOptions.some((p) => p.id === routeProjectId);
+    if (!exists) return;
+    if (form.getValues("projectId") !== routeProjectId) {
+      form.setValue("projectId", routeProjectId);
+    }
+  }, [routeProjectId, projectOptions, form]);
+
+  useEffect(() => {
+    if (selectedProject?.projectType !== "vaiu") return;
+    if (form.getValues("issueType") === "github") {
+      form.setValue("issueType", "vaiu");
+    }
+  }, [selectedProject?.projectType, selectedProjectId, form]);
+
   const onSubmit = (values: CreateTaskSchema) => {
     mutate(
       { json: { ...values, workspaceId } },
@@ -95,48 +122,50 @@ export const CreateTaskForm = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="issueType"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>
-                      Issue type <span className="ml-0.5 text-red-500">*</span>
-                    </FormLabel>
-                    <Select
-                      value={field.value ?? "github"}
-                      onValueChange={field.onChange}
-                      disabled={isPending}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose issue type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="github">
-                          <span className="inline-flex items-center gap-2">
-                            <FaGithub className="h-4 w-4" />
-                            GitHub issue
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="vaiu">
-                          <span className="inline-flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" />
-                            Vaiu issue
-                          </span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {field.value === "vaiu"
-                        ? "A Vaiu issue is tracked only in this workspace and isn’t synced to GitHub."
-                        : "A GitHub issue will be created on the linked repository and stays in sync with GitHub."}
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {showGithubIssueOption && (
+                <FormField
+                  control={form.control}
+                  name="issueType"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>
+                        Issue type <span className="ml-0.5 text-red-500">*</span>
+                      </FormLabel>
+                      <Select
+                        value={field.value ?? "github"}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose issue type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="github">
+                            <span className="inline-flex items-center gap-2">
+                              <FaGithub className="h-4 w-4" />
+                              GitHub issue
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="vaiu">
+                            <span className="inline-flex items-center gap-2">
+                              <Sparkles className="h-4 w-4" />
+                              Vaiu issue
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {field.value === "vaiu"
+                          ? "A Vaiu issue is tracked only in this workspace and isn’t synced to GitHub."
+                          : "A GitHub issue will be created on the linked repository and stays in sync with GitHub."}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="name"
@@ -148,7 +177,7 @@ export const CreateTaskForm = ({
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="Enter issue name"
+                        placeholder="Enter issue title"
                       />
                     </FormControl>
                     <FormMessage />
