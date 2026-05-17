@@ -3,10 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 
 interface useGetProjectProps {
   projectId: string;
+  /** When false, the query does not run (defaults to true). */
+  enabled?: boolean;
 }
-export const useGetProject = ({ projectId }: useGetProjectProps) => {
+export const useGetProject = ({
+  projectId,
+  enabled = true,
+}: useGetProjectProps) => {
   const query = useQuery({
     queryKey: ["project", projectId],
+    enabled: enabled && Boolean(projectId),
     queryFn: async () => {
       const response = await client.api.v1.projects[":projectId"].$get({
         param: { projectId },

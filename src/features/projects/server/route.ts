@@ -1009,14 +1009,22 @@ const app = new Hono()
     const user = c.get("user");
     const { projectId } = c.req.param();
 
-    const { project, access } = await getProjectContext({
-      databases,
-      userId: user.$id,
+    const project = await databases.getDocument<Project>(
+      DATABASE_ID,
+      PROJECTS_ID,
       projectId,
-    });
+    );
 
-    if (!access.hasAccess) {
-      return c.json({ error: "Forbidden" }, 403);
+    const isSuper = await isSuperAdmin({ databases, userId: user.$id });
+    if (!isSuper) {
+      const member = await getMember({
+        databases,
+        workspaceId: project.workspaceId,
+        userId: user.$id,
+      });
+      if (!member) {
+        return c.json({ error: "Forbidden" }, 403);
+      }
     }
 
     return c.json({

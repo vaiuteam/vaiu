@@ -58,9 +58,10 @@ const Hero = () => {
             </span>
           </h1>
           <p className="text-sm text-gray-400 sm:text-lg">
-            A platform where you can contribute to{" "}
+            {/* A platform where you can contribute to{" "}
             <br className="block md:hidden" /> real-world projects in a closed
-            environment.
+            environment. */}
+            Make any project trackable and AI-powered with Vaiu.
           </p>
         </div>
         <div className="mt-10">

@@ -23,11 +23,17 @@ export const TaskIdClient = () => {
     <div className="flex flex-col">
       <TasksBreadcrumbs issue={data} project={data.project} />
       <Separator className="my-6" />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TaskOverview issue={data} />
-        <TaskDescription issue={data} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <TaskDescription issue={data} />
+          <TaskComments issueId={issueId} />
+        </div>
+        <aside className="lg:col-span-1">
+          <div className="lg:sticky lg:top-6">
+            <TaskOverview issue={data} />
+          </div>
+        </aside>
       </div>
-      <TaskComments issueId={issueId} />
     </div>
   );
 };

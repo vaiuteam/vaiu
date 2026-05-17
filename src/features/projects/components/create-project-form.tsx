@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useRef } from "react";
-import Image from "next/image";
+import { useEffect } from "react";
+// import Image from "next/image";
 import Link from "next/link";
-import { ImageIcon, Loader2, Github, Sparkles } from "lucide-react";
+import { Loader2, Github, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,7 +26,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { cn } from "@/lib/utils";
@@ -62,8 +62,8 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
   const { data: repos, isLoading: isLoadingRepos, error: reposError } = useGetRepos({ workspaceId });
   const { data: githubStatus, isLoading: isLoadingGithubStatus } = useGetGithubStatus();
   const githubConnected = !!githubStatus?.connected;
-  const newIconInputRef = useRef<HTMLInputElement>(null);
-  const existingIconInputRef = useRef<HTMLInputElement>(null);
+  // const newIconInputRef = useRef<HTMLInputElement>(null);
+  // const existingIconInputRef = useRef<HTMLInputElement>(null);
   const form1 = useForm<CreateProjectSchema>({
     resolver: zodResolver(createProjectSchema.omit({ workspaceId: true })),
     defaultValues: {
@@ -123,18 +123,18 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     );
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form1.setValue("image", file);
-    }
-  };
-  const handleImageChangeForEp = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form2.setValue("image", file);
-    }
-  };
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     form1.setValue("image", file);
+  //   }
+  // };
+  // const handleImageChangeForEp = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     form2.setValue("image", file);
+  //   }
+  // };
 
   return (
     <Tabs defaultValue="create-new-project" className="w-full px-6 py-8">
@@ -252,6 +252,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                       </FormItem>
                     )}
                   />
+                  {/* Image upload hidden for now
                   <FormField
                     control={form1.control}
                     name="image"
@@ -272,7 +273,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                               />
                             </div>
                           ) : (
-                              <Avatar className="size-[72px]">
+                            <Avatar className="size-[72px]">
                               <AvatarFallback className="bg-muted/70">
                                 <ImageIcon className="size-[36px] text-neutral-400" />
                               </AvatarFallback>
@@ -323,6 +324,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                       </div>
                     )}
                   />
+                  */}
                 </div>
 
                 <Separator className="my-7 bg-border/55" />
@@ -439,6 +441,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                       )}
                     />
                   )}
+                  {/* Image upload hidden for now
                   <div className="">
                     <FormField
                       control={form2.control}
@@ -514,6 +517,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                       )}
                     />
                   </div>
+                  */}
                 </div>
                 <Separator className="my-7 bg-border/55" />
                 <div className="mt-6 flex w-full items-center justify-between gap-4">

@@ -23,6 +23,7 @@ export const CreateTaskFormWrapper = ({
     id: project.$id,
     name: project.name,
     imageUrl: project.imageUrl,
+    projectType: project.projectType as "vaiu" | "github",
   }));
   const memberOptions = members?.documents.map((project) => ({
     id: project.$id,

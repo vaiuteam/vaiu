@@ -181,25 +181,23 @@ export function PRActionsCell({ pr }: PRActionsCellProps) {
 
       {/* AI Review Dialog */}
       <Dialog open={showAIReview} onOpenChange={setShowAIReview}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>AI Review Results</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle>AI Review</DialogTitle>
           </DialogHeader>
           {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <span className="ml-4">Analyzing...</span>
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-4 text-sm text-muted-foreground">Analyzing pull request…</span>
             </div>
           ) : reviewData?.review ? (
-            <div>
-              <AIReviewResults
-                review={reviewData.review}
-                onClose={handleCloseReview}
-              />
-            </div>
+            <AIReviewResults
+              review={reviewData.review}
+              onClose={handleCloseReview}
+            />
           ) : (
-            <div className="p-8 text-center">
-              <p>No review data available.</p>
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              No review data available.
             </div>
           )}
         </DialogContent>
@@ -207,43 +205,44 @@ export function PRActionsCell({ pr }: PRActionsCellProps) {
 
       {/* AI Summary Dialog */}
       <Dialog open={showAISummary} onOpenChange={setShowAISummary}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl p-6">
           <DialogHeader>
-            <DialogTitle>AI Summary</DialogTitle>
+            <DialogTitle className="text-xl">AI Summary</DialogTitle>
+            <p className="text-sm text-muted-foreground line-clamp-2">{pr.title}</p>
           </DialogHeader>
-          <AISummaryCard
-            workspaceId={workspaceId}
-            projectId={projectId}
-            type="pr"
-            identifier={pr.number}
-            title={pr.title}
-          />
+          <div className="mt-2">
+            <AISummaryCard
+              workspaceId={workspaceId}
+              projectId={projectId}
+              type="pr"
+              identifier={pr.number}
+              title={pr.title}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Test Generation Dialog */}
       <Dialog open={showTestGeneration} onOpenChange={setShowTestGeneration}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sr-only">
-            <DialogTitle>AI Test Generation Results</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle>AI Test Generation</DialogTitle>
           </DialogHeader>
           {isTestsLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <span className="ml-4">Generating tests...</span>
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-4 text-sm text-muted-foreground">Generating tests…</span>
             </div>
           ) : testsData?.tests ? (
-            <div>
-              <TestGenerationResults
-                testGeneration={testsData.tests}
-                projectId={projectId}
-                prNumber={pr.number}
-                onClose={handleCloseTests}
-              />
-            </div>
+            <TestGenerationResults
+              testGeneration={testsData.tests}
+              projectId={projectId}
+              prNumber={pr.number}
+              onClose={handleCloseTests}
+            />
           ) : (
-            <div className="p-8 text-center">
-              <p>No test data available.</p>
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              No test data available.
             </div>
           )}
         </DialogContent>
@@ -251,7 +250,7 @@ export function PRActionsCell({ pr }: PRActionsCellProps) {
 
       {/* Test Management Dialog */}
       <Dialog open={showTestManagement} onOpenChange={setShowTestManagement}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto rounded-2xl p-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Test Management</DialogTitle>
           </DialogHeader>

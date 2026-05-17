@@ -30,23 +30,26 @@ export interface PlanLimits {
     durationDays: number | null; // null for unlimited
 }
 
+// Invariant: aiCredits (workspace pool) >= membersPerWorkspace * aiCreditsPerUser
+// so every member can actually reach their advertised per-user quota.
+// For ENTERPRISE (unlimited members), the pool is set to unlimited too.
 export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     [SubscriptionPlan.FREE]: {
         workspaces: 1,
         projectsPerWorkspace: 1,
-        membersPerWorkspace: 3,
+        membersPerWorkspace: 5,
         roomsPerWorkspace: 2,
-        aiCredits: 10, // Total pool
-        aiCreditsPerUser: 5, // Per-user quota
+        aiCredits: 25, // 5 members × 5 per-user
+        aiCreditsPerUser: 5,
         durationDays: 30,
     },
     [SubscriptionPlan.PRO]: {
         workspaces: 5,
-        projectsPerWorkspace: 10,
+        projectsPerWorkspace: 5,
         membersPerWorkspace: 15,
         roomsPerWorkspace: 10,
-        aiCredits: 500, // Total pool
-        aiCreditsPerUser: 100, // Per-user quota
+        aiCredits: 1500, // 15 members × 100 per-user
+        aiCreditsPerUser: 100,
         durationDays: null,
     },
     [SubscriptionPlan.STANDARD]: {
@@ -54,8 +57,8 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
         projectsPerWorkspace: 50,
         membersPerWorkspace: 50,
         roomsPerWorkspace: 50,
-        aiCredits: 2000, // Total pool
-        aiCreditsPerUser: 200, // Per-user quota
+        aiCredits: 10000, // 50 members × 200 per-user
+        aiCreditsPerUser: 200,
         durationDays: null,
     },
     [SubscriptionPlan.ENTERPRISE]: {
@@ -63,8 +66,8 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
         projectsPerWorkspace: -1, // unlimited
         membersPerWorkspace: -1, // unlimited
         roomsPerWorkspace: -1, // unlimited
-        aiCredits: 10000, // Total pool
-        aiCreditsPerUser: 1000, // Per-user quota
+        aiCredits: -1, // unlimited (members are unlimited)
+        aiCreditsPerUser: 1000,
         durationDays: null,
     },
 };
@@ -79,22 +82,22 @@ export const PLAN_PRICING: Record<SubscriptionPlan, PlanPricing> = {
     [SubscriptionPlan.FREE]: {
         monthly: 0,
         yearly: 0,
-        currency: "INR",
+        currency: "USD",
     },
     [SubscriptionPlan.PRO]: {
-        monthly: 999,
-        yearly: 9999,
-        currency: "INR",
+        monthly: 12,
+        yearly: 120, // ~17% off vs 12 * 12
+        currency: "USD",
     },
     [SubscriptionPlan.STANDARD]: {
-        monthly: 2999,
-        yearly: 29999,
-        currency: "INR",
+        monthly: 30,
+        yearly: 300, // ~17% off vs 30 * 12
+        currency: "USD",
     },
     [SubscriptionPlan.ENTERPRISE]: {
         monthly: null, // Contact sales
         yearly: null,  // Contact sales
-        currency: "INR",
+        currency: "USD",
     },
 };
 
@@ -116,8 +119,10 @@ export type Subscription = Models.Document & {
     roomsPerWorkspace?: number;
     aiCredits?: number;
     aiCreditsPerUser?: number;
-    monthlyPrice: number | null;
-    yearlyPrice: number | null;
+    // The amount actually charged for this subscription per `billingCycle`,
+    // in the smallest unit-equivalent of `currency`. null for FREE / Enterprise.
+    price: number | null;
+    currency: string;
     durationDays: number | null;
 };
 

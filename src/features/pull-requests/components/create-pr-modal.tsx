@@ -6,7 +6,7 @@ import { useCreatePrModal } from "../hooks/use-create-pr-modal";
 export const CreatePrModal = () => {
   const { isOpen, setIsOpen, closePr } = useCreatePrModal();
   return (
-    <ResponsiveModal open={isOpen} onOpenChange={setIsOpen}>
+    <ResponsiveModal open={isOpen} onOpenChange={setIsOpen} size="2xl" title="Create pull request">
       <CreatePrForm onCancel={closePr} />
     </ResponsiveModal>
   );

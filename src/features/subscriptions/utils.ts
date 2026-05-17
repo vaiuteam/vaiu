@@ -7,24 +7,45 @@ import { MEMBERS_ID } from "@/config";
 interface GetSubscriptionProps {
     databases: Databases;
     userId: string;
+    includeInactive?: boolean;
 }
 
+// Returns the user's currently-effective subscription: ACTIVE status AND
+// currentPeriodEnd in the future. Pass includeInactive=true on management
+// screens that need to render historical or pending rows verbatim.
 export const getUserSubscription = async ({
     databases,
     userId,
+    includeInactive = false,
 }: GetSubscriptionProps): Promise<Subscription | null> => {
     try {
+        const queries = [
+            Query.equal("userId", userId),
+            Query.orderDesc("$createdAt"),
+            Query.limit(includeInactive ? 1 : 10),
+        ];
+
         const subscriptions = await databases.listDocuments<Subscription>(
             DATABASE_ID,
             SUBSCRIPTIONS_ID,
-            [Query.equal("userId", userId), Query.orderDesc("$createdAt"), Query.limit(1)]
+            queries
         );
 
         if (subscriptions.documents.length === 0) {
             return null;
         }
 
-        return subscriptions.documents[0];
+        if (includeInactive) {
+            return subscriptions.documents[0];
+        }
+
+        const now = new Date();
+        const active = subscriptions.documents.find((s) => {
+            if (s.status !== SubscriptionStatus.ACTIVE) return false;
+            return new Date(s.currentPeriodEnd) > now;
+        });
+
+        return active ?? null;
     } catch (error: unknown) {
         console.error("Error fetching user subscription:", error);
         return null;
@@ -65,20 +86,32 @@ export const getWorkspaceSubscription = async ({
     workspaceId: string;
 }): Promise<{ plan: SubscriptionPlan; subscription: Subscription | null }> => {
     try {
-        // Get all admins of the workspace
         const admins = await databases.listDocuments(
             DATABASE_ID,
             MEMBERS_ID,
-            [Query.equal("workspaceId", workspaceId), Query.equal("role", MemberRole.ADMIN)]
+            [
+                Query.equal("workspaceId", workspaceId),
+                Query.equal("role", [MemberRole.ADMIN, MemberRole.SUPER_ADMIN]),
+            ]
         );
 
         if (admins.documents.length === 0) {
             return { plan: SubscriptionPlan.FREE, subscription: null };
         }
 
-        // Get subscriptions for all admins
-        let highestPlan = SubscriptionPlan.FREE;
-        let highestSubscription: Subscription | null = null;
+        const adminUserIds = admins.documents.map((m) => m.userId);
+        const now = new Date();
+
+        const subs = await databases.listDocuments<Subscription>(
+            DATABASE_ID,
+            SUBSCRIPTIONS_ID,
+            [
+                Query.equal("userId", adminUserIds),
+                Query.equal("status", SubscriptionStatus.ACTIVE),
+                Query.orderDesc("$createdAt"),
+                Query.limit(100),
+            ]
+        );
 
         const planRanking = {
             [SubscriptionPlan.FREE]: 0,
@@ -87,20 +120,14 @@ export const getWorkspaceSubscription = async ({
             [SubscriptionPlan.ENTERPRISE]: 3,
         };
 
-        for (const admin of admins.documents) {
-            const subscription = await getUserSubscription({
-                databases,
-                userId: admin.userId,
-            });
+        let highestPlan = SubscriptionPlan.FREE;
+        let highestSubscription: Subscription | null = null;
 
-            if (subscription && subscription.status === SubscriptionStatus.ACTIVE) {
-                const currentRank = planRanking[subscription.plan];
-                const highestRank = planRanking[highestPlan];
-
-                if (currentRank > highestRank) {
-                    highestPlan = subscription.plan;
-                    highestSubscription = subscription;
-                }
+        for (const sub of subs.documents) {
+            if (new Date(sub.currentPeriodEnd) <= now) continue;
+            if (planRanking[sub.plan] > planRanking[highestPlan]) {
+                highestPlan = sub.plan;
+                highestSubscription = sub;
             }
         }
 
@@ -109,6 +136,41 @@ export const getWorkspaceSubscription = async ({
         console.error("Error fetching workspace subscription:", error);
         return { plan: SubscriptionPlan.FREE, subscription: null };
     }
+};
+
+// Compute the start of the credit-reset window for a subscription. Monthly
+// plans reset every month from the subscription start anniversary; yearly
+// plans reset once at the start of each yearly period.
+const getCreditWindowStart = (subscription: Subscription | null): Date => {
+    if (!subscription) return new Date(0);
+
+    const periodStart = new Date(subscription.currentPeriodStart);
+    const now = new Date();
+
+    if (subscription.billingCycle !== "MONTHLY") {
+        return periodStart;
+    }
+
+    const windowStart = new Date(periodStart);
+    while (true) {
+        const next = new Date(windowStart);
+        next.setMonth(next.getMonth() + 1);
+        if (next > now) break;
+        windowStart.setTime(next.getTime());
+    }
+    return windowStart;
+};
+
+const parseWorkspaceCredits = (value: unknown): Record<string, number> => {
+    if (!value) return {};
+    if (typeof value === "string") {
+        try {
+            return JSON.parse(value);
+        } catch {
+            return {};
+        }
+    }
+    return value as Record<string, number>;
 };
 
 interface CheckSubscriptionLimitProps {
@@ -137,30 +199,37 @@ export const checkSubscriptionLimit = async ({
         if (limitType === "workspaces") {
             // For workspaces: Use user's own subscription
             const subscription = await getUserSubscription({ databases, userId });
-            plan = subscription?.plan || SubscriptionPlan.FREE;
 
-            // Use subscription fields
-            limits = subscription ? {
-                workspaces: subscription.workspaces ?? PLAN_LIMITS[plan].workspaces,
-                projectsPerWorkspace: subscription.projectsPerWorkspace ?? PLAN_LIMITS[plan].projectsPerWorkspace,
-                membersPerWorkspace: subscription.membersPerWorkspace ?? PLAN_LIMITS[plan].membersPerWorkspace,
-                roomsPerWorkspace: subscription.roomsPerWorkspace ?? PLAN_LIMITS[plan].roomsPerWorkspace,
-                aiCredits: subscription.aiCredits ?? PLAN_LIMITS[plan].aiCredits,
-                aiCreditsPerUser: subscription.aiCreditsPerUser ?? PLAN_LIMITS[plan].aiCreditsPerUser,
-                durationDays: subscription.durationDays ?? PLAN_LIMITS[plan].durationDays,
-            } : PLAN_LIMITS[plan];
-
-            // Check if subscription is expired for FREE plan
-            if (plan === SubscriptionPlan.FREE && subscription) {
-                const endDate = new Date(subscription.currentPeriodEnd);
-                if (endDate < new Date()) {
+            if (!subscription) {
+                // Either a brand-new user (no row) or a user whose previous
+                // subscription has lapsed. Look for any historical row to
+                // distinguish the two — lapsed users must upgrade to continue.
+                const latest = await getUserSubscription({
+                    databases,
+                    userId,
+                    includeInactive: true,
+                });
+                if (latest) {
                     return {
                         allowed: false,
                         limit: 0,
                         current: 0,
-                        plan,
+                        plan: latest.plan,
                     };
                 }
+                plan = SubscriptionPlan.FREE;
+                limits = PLAN_LIMITS[plan];
+            } else {
+                plan = subscription.plan;
+                limits = {
+                    workspaces: subscription.workspaces ?? PLAN_LIMITS[plan].workspaces,
+                    projectsPerWorkspace: subscription.projectsPerWorkspace ?? PLAN_LIMITS[plan].projectsPerWorkspace,
+                    membersPerWorkspace: subscription.membersPerWorkspace ?? PLAN_LIMITS[plan].membersPerWorkspace,
+                    roomsPerWorkspace: subscription.roomsPerWorkspace ?? PLAN_LIMITS[plan].roomsPerWorkspace,
+                    aiCredits: subscription.aiCredits ?? PLAN_LIMITS[plan].aiCredits,
+                    aiCreditsPerUser: subscription.aiCreditsPerUser ?? PLAN_LIMITS[plan].aiCreditsPerUser,
+                    durationDays: subscription.durationDays ?? PLAN_LIMITS[plan].durationDays,
+                };
             }
         } else {
             // For projects/rooms/members: Use workspace's highest admin subscription
@@ -190,18 +259,7 @@ export const checkSubscriptionLimit = async ({
                 durationDays: workspaceSubscription.subscription.durationDays ?? PLAN_LIMITS[plan].durationDays,
             } : PLAN_LIMITS[plan];
 
-            // Check if subscription is expired
-            if (workspaceSubscription.subscription) {
-                const endDate = new Date(workspaceSubscription.subscription.currentPeriodEnd);
-                if (endDate < new Date()) {
-                    return {
-                        allowed: false,
-                        limit: 0,
-                        current: 0,
-                        plan,
-                    };
-                }
-            }
+            // getWorkspaceSubscription already filters by ACTIVE+not-expired.
         }
 
         // Get current usage
@@ -265,25 +323,47 @@ export const checkSubscriptionLimit = async ({
                 current = rooms.total;
                 break;
 
-            case "aiCredits":
+            case "aiCredits": {
                 limit = limits.aiCredits;
                 if (limit === -1) {
                     return { allowed: true, limit: -1, current: 0, plan };
                 }
 
-                // Get workspace-level AI credits usage
-                const usages = await databases.listDocuments<UserUsage>(
-                    DATABASE_ID,
-                    USER_USAGE_ID,
-                    [Query.equal("userId", userId), Query.limit(1)]
-                );
+                if (!workspaceId) {
+                    return { allowed: false, limit, current: 0, plan };
+                }
 
-                if (usages.documents.length > 0) {
-                    current = usages.documents[0].aiCreditsUsed;
-                } else {
-                    current = 0;
+                // Sum this workspace's credit usage across all member usage docs,
+                // ignoring contributions from prior billing periods.
+                const workspaceSubForWindow = await getWorkspaceSubscription({
+                    databases,
+                    workspaceId,
+                });
+                const windowStart = getCreditWindowStart(workspaceSubForWindow.subscription);
+
+                const wsMembers = await databases.listDocuments(
+                    DATABASE_ID,
+                    MEMBERS_ID,
+                    [Query.equal("workspaceId", workspaceId), Query.limit(200)]
+                );
+                const memberUserIds = wsMembers.documents.map((m) => m.userId);
+
+                if (memberUserIds.length > 0) {
+                    const memberUsages = await databases.listDocuments<UserUsage>(
+                        DATABASE_ID,
+                        USER_USAGE_ID,
+                        [Query.equal("userId", memberUserIds), Query.limit(200)]
+                    );
+
+                    for (const usage of memberUsages.documents) {
+                        const lastUpdated = new Date(usage.lastUpdated || 0);
+                        if (lastUpdated < windowStart) continue;
+                        const perWorkspace = parseWorkspaceCredits(usage.aiCreditsPerWorkspace);
+                        current += perWorkspace[workspaceId] || 0;
+                    }
                 }
                 break;
+            }
         }
 
         return {
@@ -331,7 +411,6 @@ export const consumeAICredits = async ({
             workspaceId,
         });
 
-        // Use subscription fields
         const limits = workspaceSubscription.subscription ? {
             aiCredits: workspaceSubscription.subscription.aiCredits,
             aiCreditsPerUser: workspaceSubscription.subscription.aiCreditsPerUser,
@@ -342,37 +421,40 @@ export const consumeAICredits = async ({
         const workspacePoolLimit = limits.aiCredits ?? PLAN_LIMITS[workspaceSubscription.plan].aiCredits;
         const userQuotaLimit = limits.aiCreditsPerUser ?? PLAN_LIMITS[workspaceSubscription.plan].aiCreditsPerUser;
 
-        // Get all workspace members' usage for pool calculation
+        const windowStart = getCreditWindowStart(workspaceSubscription.subscription);
+
+        // Single batched query for all member usage docs
         const members = await databases.listDocuments(
             DATABASE_ID,
             MEMBERS_ID,
-            [Query.equal("workspaceId", workspaceId)]
+            [Query.equal("workspaceId", workspaceId), Query.limit(200)]
         );
+        const memberUserIds = members.documents.map((m) => m.userId);
 
         let totalWorkspaceUsage = 0;
         let userWorkspaceUsage = 0;
         let usageDoc: UserUsage | null = null;
+        let userWorkspaceUsageStale = false;
 
-        // Calculate total workspace usage and user's usage in this workspace
-        for (const member of members.documents) {
+        if (memberUserIds.length > 0) {
             const memberUsages = await databases.listDocuments<UserUsage>(
                 DATABASE_ID,
                 USER_USAGE_ID,
-                [Query.equal("userId", member.userId), Query.limit(1)]
+                [Query.equal("userId", memberUserIds), Query.limit(200)]
             );
 
-            if (memberUsages.documents.length > 0) {
-                const usage = memberUsages.documents[0];
-                const aiCreditsPerWorkspace = typeof usage.aiCreditsPerWorkspace === 'string'
-                    ? JSON.parse(usage.aiCreditsPerWorkspace)
-                    : usage.aiCreditsPerWorkspace;
+            for (const usage of memberUsages.documents) {
+                const perWorkspace = parseWorkspaceCredits(usage.aiCreditsPerWorkspace);
+                const lastUpdated = new Date(usage.lastUpdated || 0);
+                const inCurrentWindow = lastUpdated >= windowStart;
+                const credits = inCurrentWindow ? perWorkspace[workspaceId] || 0 : 0;
 
-                const workspaceCredits = aiCreditsPerWorkspace[workspaceId] || 0;
-                totalWorkspaceUsage += workspaceCredits;
+                totalWorkspaceUsage += credits;
 
-                if (member.userId === userId) {
-                    userWorkspaceUsage = workspaceCredits;
+                if (usage.userId === userId) {
+                    userWorkspaceUsage = credits;
                     usageDoc = usage;
+                    userWorkspaceUsageStale = !inCurrentWindow;
                 }
             }
         }
@@ -399,18 +481,23 @@ export const consumeAICredits = async ({
 
         // Consume credits
         if (usageDoc) {
-            const aiCreditsPerWorkspace = typeof usageDoc.aiCreditsPerWorkspace === 'string'
-                ? JSON.parse(usageDoc.aiCreditsPerWorkspace)
-                : usageDoc.aiCreditsPerWorkspace;
+            const aiCreditsPerWorkspace = parseWorkspaceCredits(usageDoc.aiCreditsPerWorkspace);
+
+            // Reset this workspace's bucket if it carries credits from a prior period.
+            if (userWorkspaceUsageStale) {
+                aiCreditsPerWorkspace[workspaceId] = 0;
+            }
 
             aiCreditsPerWorkspace[workspaceId] = (aiCreditsPerWorkspace[workspaceId] || 0) + creditsToConsume;
 
+            // aiCreditsUsed is a lifetime/usage counter; keep accumulating but
+            // ignore for limit checks (per-period scoping handled above).
             await databases.updateDocument(
                 DATABASE_ID,
                 USER_USAGE_ID,
                 usageDoc.$id,
                 {
-                    aiCreditsUsed: usageDoc.aiCreditsUsed + creditsToConsume,
+                    aiCreditsUsed: (usageDoc.aiCreditsUsed || 0) + creditsToConsume,
                     aiCreditsPerWorkspace: JSON.stringify(aiCreditsPerWorkspace),
                     lastUpdated: new Date().toISOString(),
                 }
@@ -470,13 +557,29 @@ export const getPlanFeatures = (plan: SubscriptionPlan, subscription?: Subscript
         features.push(`${limits.projectsPerWorkspace} project${limits.projectsPerWorkspace > 1 ? 's' : ''} per workspace`);
     }
 
+    if (limits.membersPerWorkspace === -1) {
+        features.push("Unlimited members per workspace");
+    } else {
+        features.push(`${limits.membersPerWorkspace} member${limits.membersPerWorkspace > 1 ? 's' : ''} per workspace`);
+    }
+
     if (limits.roomsPerWorkspace === -1) {
         features.push("Unlimited rooms");
     } else {
         features.push(`${limits.roomsPerWorkspace} room${limits.roomsPerWorkspace > 1 ? 's' : ''} per workspace`);
     }
 
-    features.push(`${limits.aiCredits} AI credits per month`);
+    if (limits.aiCredits === -1) {
+        features.push("Unlimited AI credits (shared workspace pool)");
+    } else {
+        features.push(`${limits.aiCredits} AI credits per month (shared workspace pool)`);
+    }
+
+    if (limits.aiCreditsPerUser === -1) {
+        features.push("Unlimited AI credits per user per month");
+    } else {
+        features.push(`${limits.aiCreditsPerUser} AI credits per user per month`);
+    }
 
     if (limits.durationDays) {
         features.push(`Valid for ${limits.durationDays} days`);

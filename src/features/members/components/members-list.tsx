@@ -21,6 +21,8 @@ import { useUpdateMember } from "@/features/members/api/use-update-member";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { MemberAvatar } from "@/features/members/components/members-avatar";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { PageError } from "@/components/page-error";
 
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
@@ -31,9 +33,19 @@ export const MembersList = () => {
   );
 
   const { data } = useGetMembers({ workspaceId });
-
+  const { data: currentWorkspaceMember } = useCurrentWorkspaceMember(workspaceId);
   const { mutate: deleteMember, isPending: deletingMember } = useDeleteMember();
   const { mutate: updateMember, isPending: updatingMember } = useUpdateMember();
+
+  const canManageMembers =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
+
+  if (data && !canManageMembers) {
+    return <PageError message="You do not have access to workspace members." />;
+  }
+
+  const isAdmin = canManageMembers;
 
   const handleUpdateMember = (memberId: string, role: MemberRole) => {
     updateMember({ param: { memberId }, json: { role } });
@@ -78,46 +90,50 @@ export const MembersList = () => {
               <div className="flex flex-col">
                 <p className="text-sm font-medium">{member.name}</p>
                 <p className="text-xs font-medium">{member.email}</p>
-                <p className="text-xs font-semibold text-destructive">
-                  {member.role}
-                </p>
+                {isAdmin && (
+                  <p className="text-xs font-semibold text-destructive">
+                    {member.role}
+                  </p>
+                )}
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="ml-auto" variant="secondary" size="icon">
-                    <MoreVertical className="size-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="bottom" align="end">
-                  <DropdownMenuItem
-                    className={`font-medium ${
-                      member.role === MemberRole.ADMIN && "hidden"
-                    }`}
-                    onClick={() =>
-                      handleUpdateMember(member.$id, MemberRole.ADMIN)
-                    }
-                    disabled={updatingMember}
-                  >
-                    Set as Administrator
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="font-medium"
-                    onClick={() =>
-                      handleUpdateMember(member.$id, MemberRole.MEMBER)
-                    }
-                    disabled={updatingMember}
-                  >
-                    Set as Member
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="font-medium text-amber-700"
-                    onClick={() => handleDeleteMember(member.$id)}
-                    disabled={deletingMember}
-                  >
-                    Remove {member.name}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="ml-auto" variant="secondary" size="icon">
+                      <MoreVertical className="size-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="bottom" align="end">
+                    <DropdownMenuItem
+                      className={`font-medium ${
+                        member.role === MemberRole.ADMIN && "hidden"
+                      }`}
+                      onClick={() =>
+                        handleUpdateMember(member.$id, MemberRole.ADMIN)
+                      }
+                      disabled={updatingMember}
+                    >
+                      Set as Administrator
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="font-medium"
+                      onClick={() =>
+                        handleUpdateMember(member.$id, MemberRole.MEMBER)
+                      }
+                      disabled={updatingMember}
+                    >
+                      Set as Member
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="font-medium text-amber-700"
+                      onClick={() => handleDeleteMember(member.$id)}
+                      disabled={deletingMember}
+                    >
+                      Remove {member.name}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             {idx < data.documents.length - 1 && (
               <Separator className="my-2.5 bg-neutral-400/40" />

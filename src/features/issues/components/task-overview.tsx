@@ -18,36 +18,39 @@ interface TaskOverviewProps {
 export const TaskOverview = ({ issue }: TaskOverviewProps) => {
   const { open } = useEditTaskModal();
   return (
-    <div className="col-span-1 flex flex-col gap-y-4">
-      <div className="rounded-lg bg-muted p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">Overview</p>
-          <Button onClick={() => open(issue.$id)} size="sm" variant="secondary">
-            <Pencil className="mr-2 size-4" />
-            Edit
-          </Button>
-        </div>
-        <Separator className="my-4" />
-        <div className="flex flex-col gap-y-4">
-          <OverviewProperty label="Assignee">
-            {issue.assignee ? (
-              <>
-                <MemberAvatar name={issue.assignee.name} className="size-6" />
-                <p className="text-sm font-medium">{issue.assignee.name}</p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">Unassigned</p>
-            )}
-          </OverviewProperty>
-          <OverviewProperty label="Due Date">
-            <TaskDate value={issue.dueDate} className="text-sm font-medium" />
-          </OverviewProperty>
-          <OverviewProperty label="Status">
-            <Badge variant={issue.status}>
-              {snakeCaseToTitleCase(issue.status)}
-            </Badge>
-          </OverviewProperty>
-        </div>
+    <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm dark:bg-[hsl(var(--surface-elevated))]/60">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Details</h2>
+        <Button
+          onClick={() => open(issue.$id)}
+          size="sm"
+          variant="secondary"
+          className="rounded-full"
+        >
+          <Pencil className="mr-2 size-3.5" />
+          Edit
+        </Button>
+      </div>
+      <Separator className="my-4 bg-border/55" />
+      <div className="flex flex-col gap-y-4">
+        <OverviewProperty label="Assignee">
+          {issue.assignee ? (
+            <>
+              <MemberAvatar name={issue.assignee.name} className="size-6" />
+              <p className="text-sm font-medium">{issue.assignee.name}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Unassigned</p>
+          )}
+        </OverviewProperty>
+        <OverviewProperty label="Due date">
+          <TaskDate value={issue.dueDate} className="text-sm font-medium" />
+        </OverviewProperty>
+        <OverviewProperty label="Status">
+          <Badge variant={issue.status}>
+            {snakeCaseToTitleCase(issue.status)}
+          </Badge>
+        </OverviewProperty>
       </div>
     </div>
   );

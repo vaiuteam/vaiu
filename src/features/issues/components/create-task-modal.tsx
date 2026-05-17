@@ -6,7 +6,7 @@ import { CreateTaskFormWrapper } from "./create-task-form-wrapper";
 export const CreateTaskModal = () => {
   const { isOpen, setIsOpen, close } = useCreateTaskModal();
   return (
-    <ResponsiveModal open={isOpen} onOpenChange={setIsOpen}>
+    <ResponsiveModal open={isOpen} onOpenChange={setIsOpen} size="2xl" title="Create issue">
       <CreateTaskFormWrapper onCancel={close} />
     </ResponsiveModal>
   );

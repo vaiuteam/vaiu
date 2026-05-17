@@ -59,8 +59,9 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                 >
                     <TabsList>
                         <TabsTrigger value="MONTHLY">Monthly</TabsTrigger>
-                        <TabsTrigger value="YEARLY">
+                        <TabsTrigger value="YEARLY" className="gap-2">
                             Yearly
+                            <Badge variant="secondary" className="text-[10px]">Save ~17%</Badge>
                         </TabsTrigger>
                     </TabsList>
                 </Tabs>
@@ -94,7 +95,7 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                                             "Contact Sales"
                                         ) : (
                                             <>
-                                                ₹{price}
+                                                ${price}
                                                 {plan.name !== SubscriptionPlan.FREE && (
                                                     <span className="text-sm font-normal text-muted-foreground">
                                                         /{billingCycle === "MONTHLY" ? "month" : "year"}
@@ -105,7 +106,7 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                                     </div>
                                     {billingCycle === "YEARLY" && plan.name !== SubscriptionPlan.FREE && price !== null && (
                                         <p className="text-sm text-muted-foreground">
-                                            ₹{Math.round(price / 12)}/month billed yearly
+                                            ${(price / 12).toFixed(2)}/month billed yearly
                                         </p>
                                     )}
                                 </div>
@@ -137,7 +138,7 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                                     {isCurrentPlan
                                         ? "Current Plan"
                                         : plan.name === SubscriptionPlan.FREE
-                                            ? "Free Forever"
+                                            ? "30-day trial"
                                             : plan.name === SubscriptionPlan.ENTERPRISE
                                                 ? "Contact Sales"
                                                 : "Get Started"}

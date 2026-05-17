@@ -79,6 +79,13 @@ const app = new Hono()
         return c.json({ error: "Project does not belong to this workspace" }, 400);
       }
 
+      if (project.projectType === "vaiu") {
+        return c.json(
+          { error: "Pull requests are not available for Vaiu projects." },
+          400,
+        );
+      }
+
       if (!access.hasAccess) {
         return c.json({ error: "Forbidden" }, 403);
       }

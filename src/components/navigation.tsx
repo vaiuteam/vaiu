@@ -25,6 +25,8 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { Button } from "./ui/button";
+import { useCurrentWorkspaceMember } from "@/features/workspaces/api/use-is-member";
+import { MemberRole } from "@/features/members/types";
 
 const navItems = [
   {
@@ -102,6 +104,16 @@ export const Navigation = () => {
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { data: currentWorkspaceMember } = useCurrentWorkspaceMember(workspaceId);
+  const isWorkspaceAdmin =
+    currentWorkspaceMember?.role === MemberRole.ADMIN ||
+    currentWorkspaceMember?.role === MemberRole.SUPER_ADMIN;
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.label === "Issues" && !isWorkspaceAdmin) return false;
+    if (item.label === "Settings" && !isWorkspaceAdmin) return false;
+    if (item.label === "Members" && !isWorkspaceAdmin) return false;
+    return true;
+  });
 
   // const OPEN_CONTRIBUTION_WORKSPACE_ID = process.env.OPEN_CONTRIBUTION_WORKSPACE_ID || "";
 
@@ -127,7 +139,7 @@ export const Navigation = () => {
     return (
       <TooltipProvider>
         <ul className="flex flex-col gap-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const { activeIcon, icon, label } = item;
             const resolvedHref = getResolvedHref(workspaceId, item);
             const isActive = isItemActive(pathname, resolvedHref, label);
@@ -167,7 +179,7 @@ export const Navigation = () => {
 
   return (
     <ul className="flex flex-col">
-      {navItems.map((item) => {
+      {visibleNavItems.map((item) => {
         const { activeIcon, icon, label } = item;
         const resolvedHref = getResolvedHref(workspaceId, item);
         const isActive = isItemActive(pathname, resolvedHref, label);

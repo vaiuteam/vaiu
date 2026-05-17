@@ -353,6 +353,17 @@ const app = new Hono()
           return c.json({ error: "Project not found" }, 404);
         }
 
+        const targetProject = projects.documents[0];
+        if (targetProject.projectType === "vaiu" && issueType === "github") {
+          return c.json(
+            {
+              error:
+                "GitHub issues are not available for Vaiu projects. Create a Vaiu issue instead.",
+            },
+            400,
+          );
+        }
+
         const assigneeMemberId = assigneeId?.trim();
         if (assigneeMemberId) {
           try {
