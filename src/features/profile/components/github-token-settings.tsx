@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Github, Loader2, Eye, EyeOff, Trash2, Info } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingCaption } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,8 +58,24 @@ export const GithubTokenSettings = () => {
   if (isLoading) {
     return (
       <Card className="border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CardHeader className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-5 rounded-md" />
+            <Skeleton className="h-5 w-48 max-w-[80vw]" />
+          </div>
+          <Skeleton className="h-16 w-full rounded-md" />
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-9 w-full rounded-md" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-9 min-w-[6rem] flex-1 rounded-md" />
+            <Skeleton className="h-9 w-28 rounded-md" />
+          </div>
+          <Skeleton className="h-24 w-full rounded-md" />
+          <LoadingCaption>Checking GitHub token status</LoadingCaption>
         </CardContent>
       </Card>
     );

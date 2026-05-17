@@ -23,6 +23,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { useGetProjectMembers } from "../api/use-get-project-members";
 import { useGetProject } from "@/features/projects/api/use-get-project";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const ProjectMembersList = () => {
   const workspaceId = useWorkspaceId();
@@ -73,7 +74,21 @@ export const ProjectMembersList = () => {
       </div>
       <CardContent className="p-7">
         {isPending ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 border-b border-border/40 pb-3 last:border-0"
+              >
+                <Skeleton className="size-9 shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-44 max-w-[85vw]" />
+                </div>
+                <Skeleton className="size-8 shrink-0 rounded-md" />
+              </div>
+            ))}
+          </div>
         ) : isError ? (
           <p className="text-sm text-destructive">Could not load members.</p>
         ) : members.length === 0 ? (

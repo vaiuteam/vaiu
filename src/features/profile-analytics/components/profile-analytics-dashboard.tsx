@@ -20,6 +20,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { ProfileGithubAnalyticsSkeleton } from "@/components/loading-skeletons";
 import { useGetProfileAnalytics } from "../api/use-get-profile-analytics";
 
 interface ProfileAnalyticsDashboardProps {
@@ -49,7 +50,7 @@ export const ProfileAnalyticsDashboard = ({ username }: ProfileAnalyticsDashboar
   }
 
   if (isLoading) {
-    return <ProfileAnalyticsLoading />;
+    return <ProfileGithubAnalyticsSkeleton />;
   }
 
   if (error || !analytics) {
@@ -304,34 +305,6 @@ export const ProfileAnalyticsDashboard = ({ username }: ProfileAnalyticsDashboar
     </div>
   );
 };
-
-const ProfileAnalyticsLoading = () => (
-  <div className="p-6">
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-8"></div>
-        <Card className="p-8 mb-8">
-          <div className="flex items-center space-x-6">
-            <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-            <div className="flex-1 space-y-4">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-            </div>
-          </div>
-        </Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="p-6">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 const ProfileAnalyticsError = ({ onRetry }: { onRetry: () => void }) => (
   <div className="flex items-center justify-center min-h-96">

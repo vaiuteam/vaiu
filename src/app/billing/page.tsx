@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { SubscriptionManagement } from "@/features/subscriptions/components/subscription-management";
 import { UsageStats } from "@/features/subscriptions/components/usage-stats";
 import { useGetCurrentSubscription } from "@/features/subscriptions/api/use-get-current-subscription";
@@ -8,6 +8,7 @@ import { useGetUsage } from "@/features/subscriptions/api/use-get-usage";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Subscription, UserUsage } from "@/features/subscriptions/types";
+import { BillingPageSkeleton } from "@/components/loading-skeletons";
 
 export default function BillingPage() {
     const router = useRouter();
@@ -15,11 +16,7 @@ export default function BillingPage() {
     const { data: usage, isLoading: loadingUsage } = useGetUsage();
 
     if (loadingSubscription || loadingUsage) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <BillingPageSkeleton />;
     }
 
     if (!subscription || !usage) {

@@ -13,10 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-
-import { IssueStatus } from "../types";
+import { IssueFiltersSkeleton } from "@/components/loading-skeletons";
 import { useTaskFilter } from "../hooks/use-task-filter";
 import { DatePicker } from "@/components/date-picker";
+import { IssueStatus } from "../types";
 
 interface DataFiltersProps {
   hideProjectFilter?: boolean;
@@ -72,7 +72,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
     setFilters({ projectId: value === "all" ? null : (value as string) });
   };
 
-  if (isLoading) return null;
+  if (isLoading) return <IssueFiltersSkeleton />;
 
   return (
     <div className="flex flex-col gap-2 lg:flex-row">

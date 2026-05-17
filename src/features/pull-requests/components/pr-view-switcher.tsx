@@ -1,6 +1,6 @@
 "use client";
 import { useQueryState } from "nuqs";
-import { Loader, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,9 +12,10 @@ import { DataTable } from "./data-table";
 import { columns } from "./columns";
 import { Button } from "@/components/ui/button";
 import { useCreatePrModal } from "../hooks/use-create-pr-modal";
+import { IssuesPrBoardSkeleton } from "@/components/loading-skeletons";
+import { usePrFilter } from "../hooks/use-pr-filter";
 import { toast } from "sonner";
 import { PrDataFilters } from "./pr-data-filters";
-import { usePrFilter } from "../hooks/use-pr-filter";
 
 export const PrViewSwitcher = () => {
   const [{ status, search }] = usePrFilter();
@@ -83,9 +84,7 @@ export const PrViewSwitcher = () => {
         <PrDataFilters />
         <Separator className="my-4" />
         {prsLoading ? (
-          <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-lg border">
-            <Loader className="size-5 animate-spin text-muted-foreground" />
-          </div>
+          <IssuesPrBoardSkeleton rows={5} />
         ) : (
           <>
             <TabsContent value="table" className="mt-0">

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback } from "react";
 import { useQueryState } from "nuqs";
-import { Loader, PlusIcon, RefreshCw } from "lucide-react";
+import { PlusIcon, RefreshCw } from "lucide-react";
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,7 @@ import { IssueStatus } from "../types";
 import { useBulkUpdateTasks } from "../api/use-bulk-update-tasks";
 import { DataCalander } from "./data-calander";
 import { Button } from "@/components/ui/button";
+import { IssuesPrBoardSkeleton } from "@/components/loading-skeletons";
 
 interface TaskViewSwitcherProps {
   hideProjectFilter?: boolean;
@@ -134,9 +135,7 @@ export const TaskViewSwitcher = ({
         <DataFilters hideProjectFilter={hideProjectFilter} />
         <Separator className="my-4" />
         {tasksLoading ? (
-          <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-lg border">
-            <Loader className="size-5 animate-spin text-muted-foreground" />
-          </div>
+          <IssuesPrBoardSkeleton />
         ) : (
           <>
             <TabsContent value="table" className="mt-0">

@@ -43,6 +43,11 @@ import { Member } from "@/features/members/types";
 import Link from "next/link";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
+import {
+  WorkspaceAnalyticsSkeleton,
+  WorkspaceAnalyticsTabSkeleton,
+  WorkspaceAnalyticsMembersSkeleton,
+} from "@/components/loading-skeletons";
 
 type TabId = "overview" | "tasks" | "projects" | "members";
 
@@ -220,13 +225,7 @@ const AnalyticsOverview = ({ workspaceId }: { workspaceId: string }) => {
 
   const isLoading = analyticsLoading || projectsLoading || membersLoading || issuesLoading;
 
-  if (isLoading) {
-    return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {[...Array(5)].map((_, i) => (
-        <Card key={i} className="h-32 animate-pulse bg-muted" />
-      ))}
-    </div>;
-  }
+  if (isLoading) return <WorkspaceAnalyticsSkeleton />;
 
   if (!analytics) return <div>No data available</div>;
 
@@ -374,7 +373,7 @@ const AnalyticsTasks = ({ workspaceId }: { workspaceId: string }) => {
     return { statusData, openCount: openIssues.length, doneCount: doneIssues.length };
   }, [data]);
 
-  if (isLoading) return <div className="h-64 animate-pulse bg-muted rounded-lg" />;
+  if (isLoading) return <WorkspaceAnalyticsTabSkeleton />;
   if (!processedData) return <div>No task data available.</div>;
 
   return (
@@ -446,7 +445,7 @@ const AnalyticsProjects = ({ workspaceId }: { workspaceId: string }) => {
 
   }, [data, projectTaskCounts]);
 
-  if (isLoading) return <div className="h-64 animate-pulse bg-muted rounded-lg" />;
+  if (isLoading) return <WorkspaceAnalyticsTabSkeleton />;
   if (!data?.documents.length) return <div>No projects found.</div>;
 
   return (
@@ -543,7 +542,8 @@ const AnalyticsMembers = ({ workspaceId }: { workspaceId: string }) => {
 
   }, [memberTaskCounts, members]);
 
-  if (membersLoading || issuesLoading) return <div className="h-64 animate-pulse bg-muted rounded-lg" />;
+  if (membersLoading || issuesLoading)
+    return <WorkspaceAnalyticsMembersSkeleton />;
 
   return (
     <div className="space-y-6">

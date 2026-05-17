@@ -15,7 +15,7 @@ interface EventCardProps {
   title: string;
   project: Project;
   status: IssueStatus;
-  assignee: Member;
+  assignee?: Member | null;
 }
 const statusColorMap: Record<IssueStatus, string> = {
   [IssueStatus.BACKLOG]: "border-l-pink-500",
@@ -51,7 +51,7 @@ export const EventCard = ({
       >
         <p>{title}</p>
         <div className="flex items-center gap-x-1">
-          <MemberAvatar name={assignee?.name} />
+          <MemberAvatar name={assignee?.name ?? "Unassigned"} />
           <div className="dot" />
           <ProjectAvatar name={project?.name} image={project?.imageUrl} />
         </div>

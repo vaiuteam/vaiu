@@ -10,7 +10,7 @@ export const ProjectIdSettingsClient = () => {
   const projectId = useProjectId();
   const { data: initialValues, isLoading } = useGetProject({ projectId });
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader variant="standalone" />;
   if (!initialValues) return <PageError message="Project not found" />;
 
   return (

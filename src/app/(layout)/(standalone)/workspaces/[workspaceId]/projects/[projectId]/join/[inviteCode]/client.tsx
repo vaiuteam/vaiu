@@ -17,7 +17,7 @@ export const ProjectIdJoinClient = () => {
     projectId,
   });
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader variant="standalone" />;
   if (!initialValues) return <PageError message="Project not found" />;
 
   return (

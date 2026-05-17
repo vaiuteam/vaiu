@@ -6,6 +6,8 @@ import { useGetRooms } from "@/features/channels/api/use-get-rooms";
 import { useCreateRoomModal } from "@/features/channels/hooks/use-create-room-modal";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingCaption } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./ui/sidebar";
@@ -52,8 +54,13 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
         <ScrollArea className="h-[200px]">
           <div className="flex flex-col gap-1">
             {isLoading ? (
-              <div className="flex h-12 w-12 items-center justify-center">
-                <span className="text-xs">...</span>
+              <div className="flex flex-col gap-2 py-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="mx-auto size-10 rounded-lg" />
+                ))}
+                <LoadingCaption className="pt-3 text-[11px]">
+                  Loading rooms
+                </LoadingCaption>
               </div>
             ) : (
               <>
@@ -129,8 +136,14 @@ export const RoomSwitcher = ({ projectId, workspaceId }: RoomSwitcherProps) => {
   return (
     <div className="flex flex-col gap-y-2">
       {isLoading ? (
-        <div className="flex justify-center p-2 text-sm text-muted-foreground">
-          Loading...
+        <div className="flex flex-col gap-2 py-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-2 w-20" />
+              <Skeleton className="h-8 w-full rounded-md" />
+            </div>
+          ))}
+          <LoadingCaption className="text-[11px]">Loading rooms</LoadingCaption>
         </div>
       ) : (
         <ScrollArea className="h-[200px] pr-2">

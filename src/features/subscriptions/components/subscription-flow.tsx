@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { PricingFlowSkeleton } from "@/components/loading-skeletons";
 import { toast } from "sonner";
 import { PricingCards } from "./pricing-cards";
 import { SubscriptionPlan } from "../types";
@@ -84,13 +85,7 @@ export const SubscriptionFlow = () => {
         );
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
+    if (isLoading) return <PricingFlowSkeleton />;
 
     return (
         <div className="container py-8">

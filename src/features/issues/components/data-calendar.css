@@ -1,39 +1,87 @@
-.rbc-header {
-    @apply text-sm font-normal pb-4 text-muted-foreground border-b-0;
+/* Scoped to wrapper in DataCalander — avoids coupling with default RBC week scroll strip */
+
+.data-issues-calendar .rbc-header {
+  @apply border-b-0 pb-3 text-[0.8125rem] font-medium text-muted-foreground;
 }
 
-.rbc-header+.rbc-header {
-    @apply border-l-0;
+.data-issues-calendar .rbc-header+.rbc-header {
+  @apply border-l-0;
 }
 
-.rbc.button-link {
-    @apply text-xs font-normal text-muted-foreground;
+.data-issues-calendar .rbc-button-link {
+  @apply text-[0.6875rem] font-medium text-muted-foreground;
 }
 
-.rbc-month-row {
-    @apply min-h-[180px] border-t border-x;
+.data-issues-calendar .rbc-month-view {
+  @apply overflow-visible rounded-xl border-none;
 }
 
-:not(.rbc-month-row ~ .rbc-month-row).rbc-month-row {
-    @apply rounded-t-lg
+.data-issues-calendar .rbc-month-row {
+  min-height: 7rem;
+  overflow: visible;
+  flex: unset !important;
+  @apply border-x border-t border-border;
 }
 
-.rbc-month-row:last-of-type {
-    @apply border-b rounded-b-lg;
+.data-issues-calendar .rbc-month-row:first-of-type {
+  @apply rounded-t-lg;
 }
 
-.rbc-month-view {
-    @apply border-none;
+.data-issues-calendar .rbc-month-row:last-of-type {
+  @apply rounded-b-lg border-b;
 }
 
-.rbc-date-cell {
-    @apply p-2
+.data-issues-calendar .rbc-date-cell {
+  @apply p-2 text-right;
 }
 
-.rbc-today {
-    @apply bg-sky-300/20;
+.data-issues-calendar .rbc-today {
+  @apply bg-sky-300/15 dark:bg-primary/10;
 }
 
-.rbc-off-range-bg {
-    background: inherit;
+.data-issues-calendar .rbc-off-range-bg {
+  background: hsl(var(--muted) / 0.35);
+}
+
+/* Row-level strip that syncs scrolling across adjacent days when showAllEvents is true — keep disabled via calendar props */
+.data-issues-calendar .rbc-row-content-scrollable .rbc-row-content-scroll-container {
+  overflow-y: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.data-issues-calendar .rbc-row-content {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.data-issues-calendar .rbc-day-slot {
+  overflow: visible;
+}
+
+.data-issues-calendar .rbc-event {
+  @apply rounded-md border-none bg-transparent p-0;
+}
+
+.data-issues-calendar .rbc-event-label {
+  display: none;
+}
+
+.data-issues-calendar .rbc-event-content {
+  width: 100%;
+}
+
+.data-issues-calendar .rbc-overlay {
+  max-height: min(72vh, 26rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem;
+  border-radius: 0.65rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  box-shadow: 0 16px 50px -20px hsl(0 0% 0% / 0.45);
+}
+
+.data-issues-calendar .rbc-overlay-header {
+  @apply pb-2 text-sm font-semibold;
 }

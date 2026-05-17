@@ -15,7 +15,7 @@ export const TaskIdClient = () => {
   const issueId = UseTaskId();
   const { data, isLoading } = useGetTask({ issueId });
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader variant="task" />;
 
   if (!data) return <PageError />;
 

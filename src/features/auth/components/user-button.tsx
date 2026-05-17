@@ -1,5 +1,5 @@
 "use client";
-import { Loader, LogOut, Navigation } from "lucide-react";
+import { LogOut, Navigation } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { Separator } from "@/components/dotted-separator";
 
@@ -22,9 +23,11 @@ export const UserButton = () => {
 
   if (isLoading) {
     return (
-      <div className="flex size-10 items-center justify-center rounded-full border border-gray-300 bg-slate-200 dark:border-gray-700 dark:bg-gray-800">
-        <Loader className="size-4 animate-spin text-muted-foreground" />
-      </div>
+      <Skeleton
+        className="size-10 shrink-0 rounded-full"
+        aria-busy="true"
+        aria-label="Loading profile"
+      />
     );
   }
   if (!user) return null;

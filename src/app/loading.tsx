@@ -1,11 +1,4 @@
-"use client";
-import { LoaderPinwheelIcon } from "lucide-react";
-const LoadingPage = () => {
-  return (
-    <div className="flex h-screen flex-col items-center justify-center">
-      <LoaderPinwheelIcon className="size-6 animate-spin text-muted-foreground" />
-    </div>
-  );
-};
-
-export default LoadingPage;
+/** Root segment fallback — keep layout stable without a branded splash skeleton. */
+export default function Loading() {
+  return <div className="min-h-screen bg-background" />;
+}

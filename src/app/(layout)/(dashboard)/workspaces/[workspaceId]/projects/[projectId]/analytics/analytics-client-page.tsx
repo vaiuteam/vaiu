@@ -36,7 +36,7 @@ import { useGetPullRequests } from "@/features/pull-requests/api/use-get-pull-re
 import { useGetIssues } from "@/features/issues/api/use-get-tasks";
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id";
 import { useProjectId } from "@/features/projects/hooks/use-projectId";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ProjectAnalyticsDashboardSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 import { IssueStatus, Issue } from "@/features/issues/types";
@@ -264,7 +264,7 @@ const PullRequestAnalytics = () => {
     };
   }, [data]);
 
-  if (isLoading) return <DashboardSkeleton />;
+  if (isLoading) return <ProjectAnalyticsDashboardSkeleton />;
   if (isError || !processedData) return <DashboardError />;
 
   const { velocity, status, kpis, authors } = processedData;
@@ -485,7 +485,7 @@ const IssueAnalytics = () => {
     };
   }, [data]);
 
-  if (isLoading) return <DashboardSkeleton />;
+  if (isLoading) return <ProjectAnalyticsDashboardSkeleton />;
   if (isError || !processedData) return <DashboardError />;
 
   const { status, kpis } = processedData;
@@ -547,26 +547,6 @@ const KpiCard = ({
       <CardTitle className="text-3xl">{value}</CardTitle>
     </CardHeader>
   </Card>
-);
-
-export const DashboardSkeleton = () => (
-  <div className="space-y-6 p-4 md:p-8">
-    <Skeleton className="h-8 w-1/3" />
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-24 w-full" />
-      <Skeleton className="h-24 w-full" />
-    </div>
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Skeleton className="col-span-1 h-[350px] lg:col-span-2" />
-      <Skeleton className="h-[350px]" />
-    </div>
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Skeleton className="h-[350px]" />
-      <Skeleton className="h-[350px]" />
-    </div>
-  </div>
 );
 
 const DashboardError = () => (

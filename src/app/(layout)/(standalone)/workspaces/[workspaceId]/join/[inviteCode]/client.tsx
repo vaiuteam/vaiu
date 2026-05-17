@@ -19,7 +19,7 @@ export const WorkspaceIdJoinClient = () => {
     workspaceId,
   });
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader variant="standalone" />;
 
   if (error) {
     return <PageError message={error.message || "Failed to load workspace"} />;

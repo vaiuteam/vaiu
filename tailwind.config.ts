@@ -75,9 +75,20 @@ const config: Config = {
 			animation: {
 				spotlight: 'spotlight 2s ease .75s 1 forwards',
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'skeleton-shimmer':
+					'skeleton-shimmer 2.1s ease-in-out infinite',
+				cook: 'cook-dot 1.4s ease-in-out infinite'
 			},
 			keyframes: {
+				'skeleton-shimmer': {
+					'0%': { backgroundPosition: '200% 0' },
+					'100%': { backgroundPosition: '-200% 0' }
+				},
+				'cook-dot': {
+					'0%, 100%': { opacity: '0.35', transform: 'scale(0.92)' },
+					'50%': { opacity: '1', transform: 'scale(1)' }
+				},
 				spotlight: {
 					'0%': {
 						opacity: '0',

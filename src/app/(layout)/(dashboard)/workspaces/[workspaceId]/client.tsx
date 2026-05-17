@@ -35,7 +35,7 @@ export const WorkspaceIdClient = () => {
 
   const isLoading = analyticsLoading || tasksLoading || projectsLoading;
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <Loader variant="workspace" />;
 
   if (!analytics || !tasks || !projects)
     return <PageError message="Failed to load workspace data" />;

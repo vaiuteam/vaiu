@@ -170,7 +170,7 @@ export const SidebarComponent = () => {
 
   return (
     <Sidebar collapsible="icon" side="left" variant="floating">
-      <SidebarContent className="flex flex-col gap-4 p-3">
+      <SidebarContent className="flex flex-col">
         {/* Logo Header */}
         <SidebarGroup className="rounded-2xl bg-sidebar/55 px-1.5 py-2 shadow-none backdrop-blur-xl dark:shadow-sm">
           <SidebarHeader className="gap-0 p-0">
