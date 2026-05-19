@@ -132,14 +132,19 @@ const app = new Hono()
         search: z.string().nullish(),
         dueDate: z.string().nullish(),
         status: z.nativeEnum(IssueStatus).nullish(),
+        page: z.string().nullish(),
+        limit: z.string().nullish(),
       }),
     ),
     async (c) => {
       const { users } = await createAdminClient();
       const databases = c.get("databases");
       const user = c.get("user");
-      const { workspaceId, projectId, assigneeId, status, search, dueDate } =
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, page, limit } =
         c.req.valid("query");
+
+      const pageSize = Math.min(parseInt(limit || "20"), 100);
+      const pageIndex = Math.max(parseInt(page || "0"), 0);
 
       // Check if user is a super admin
       const isSuper = await isSuperAdmin({ databases, userId: user.$id });
@@ -219,6 +224,9 @@ const app = new Hono()
       if (search) {
         query.push(Query.search("name", search));
       }
+
+      query.push(Query.limit(pageSize));
+      query.push(Query.offset(pageIndex * pageSize));
 
       const issues = await databases.listDocuments<Issue>(
         DATABASE_ID,
@@ -552,28 +560,6 @@ const app = new Hono()
         }
       }
 
-      // Require comment when moving to IN_REVIEW or DONE status.
-      // For IN_REVIEW, allow skipping a new comment if the issue already has comments (e.g. added from the issue thread).
-      if (status === "IN_REVIEW") {
-        const trimmed =
-          typeof comment === "string" && comment.trim().length > 0
-            ? comment.trim()
-            : null;
-        if (!trimmed) {
-          const existingComments = await databases.listDocuments(
-            DATABASE_ID,
-            COMMENTS_ID,
-            [Query.equal("issueId", issueId), Query.limit(1)],
-          );
-          if (existingComments.total === 0) {
-            return c.json(
-              { error: "Comment is required when moving issue to In Review" },
-              400,
-            );
-          }
-        }
-      }
-
       if (
         status === "DONE" &&
         !(typeof comment === "string" && comment.trim().length > 0)
@@ -893,31 +879,10 @@ const app = new Hono()
 
         const isMovingToDone =
           update.status === "DONE" && existing.status !== "DONE";
-        const isMovingToReview =
-          update.status === "IN_REVIEW" && existing.status !== "IN_REVIEW";
 
         // Check permissions for moving to DONE (only super admin or admin can do this)
         if (isMovingToDone && !isSuper && member?.role !== "ADMIN") {
           return c.json({ error: "Only Admin can move issue to Done" }, 403);
-        }
-
-        // Kanban uses bulk-update (no transition comment in the payload). Allow the move
-        // if the issue already has at least one thread comment; otherwise require adding one first.
-        if (isMovingToReview) {
-          const existingComments = await databases.listDocuments(
-            DATABASE_ID,
-            COMMENTS_ID,
-            [Query.equal("issueId", existing.$id), Query.limit(1)],
-          );
-          if (existingComments.total === 0) {
-            return c.json(
-              {
-                error:
-                  "Moving to In Review requires at least one comment on this issue. Open the issue, add a comment, then move the card again.",
-              },
-              400,
-            );
-          }
         }
 
         if (isMovingToDone && (isSuper || member?.role === "ADMIN") && existing.issueType === "github") {

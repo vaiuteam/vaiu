@@ -7,7 +7,6 @@ import {
   flexRender,
   SortingState,
   getCoreRowModel,
-  getPaginationRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
@@ -27,21 +26,38 @@ import { Button } from "@/components/ui/button";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Total number of matching records on the server (for pagination label). */
+  totalCount?: number;
+  /** Current 0-based page index (server-side). */
+  pageIndex?: number;
+  /** Page size used on the server. */
+  pageSize?: number;
+  /** Called when user clicks Previous / Next. */
+  onPageChange?: (page: number) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  totalCount,
+  pageIndex = 0,
+  pageSize = 20,
+  onPageChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
+
+  const isServerPaginated = typeof onPageChange === "function";
+  const pageCount = isServerPaginated && totalCount != null
+    ? Math.ceil(totalCount / pageSize)
+    : undefined;
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -106,11 +122,17 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
+        {isServerPaginated && pageCount != null && (
+          <span className="mr-auto text-sm text-muted-foreground">
+            Page {pageIndex + 1} of {pageCount}
+            {totalCount != null && ` (${totalCount} total)`}
+          </span>
+        )}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => isServerPaginated ? onPageChange(pageIndex - 1) : undefined}
+          disabled={isServerPaginated ? pageIndex === 0 : true}
           className="bg-slate-200 text-black hover:bg-black"
         >
           Previous
@@ -118,8 +140,10 @@ export function DataTable<TData, TValue>({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
+          onClick={() => isServerPaginated ? onPageChange(pageIndex + 1) : undefined}
+          disabled={isServerPaginated
+            ? (pageCount != null ? pageIndex >= pageCount - 1 : data.length < pageSize)
+            : true}
           className="bg-slate-200 text-black"
         >
           Next

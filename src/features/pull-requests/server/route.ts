@@ -59,11 +59,15 @@ const app = new Hono()
       projectId: z.string(),
       status: z.nativeEnum(PrStatus).nullish(),
       search: z.string().nullish(),
+      page: z.string().nullish(),
     })),
     async (c) => {
       const databases = c.get("databases");
       const user = c.get("user");
-      const { workspaceId, projectId, status, search } = c.req.valid("query");
+      const { workspaceId, projectId, status, search, page } = c.req.valid("query");
+
+      const PAGE_SIZE = 30;
+      const pageNumber = Math.max(parseInt(page || "1"), 1);
 
       const { project, access } = await getProjectContext({
         databases,
@@ -111,11 +115,22 @@ const app = new Hono()
       }
 
       try {
+        // Map our status filter to the GitHub API state param to avoid fetching
+        // unnecessary PRs. MERGED maps to "closed" (we distinguish via merged_at).
+        const githubState: "open" | "closed" | "all" =
+          status === PrStatus.OPEN
+            ? "open"
+            : status === PrStatus.CLOSED || status === PrStatus.MERGED
+              ? "closed"
+              : "all";
+
         const prsFromGit = await listPullRequests(
           githubToken,
           project.owner,
           project.name,
-          "all"
+          githubState,
+          pageNumber,
+          PAGE_SIZE,
         );
 
         let pullRequests = prsFromGit.map((pr) => {
@@ -141,9 +156,11 @@ const app = new Hono()
           };
         });
 
-        // Apply filters
-        if (status) {
-          pullRequests = pullRequests.filter((pr) => pr.status === status);
+        // Narrow MERGED vs CLOSED in-memory after the GitHub fetch
+        if (status === PrStatus.MERGED) {
+          pullRequests = pullRequests.filter((pr) => pr.status === PrStatus.MERGED);
+        } else if (status === PrStatus.CLOSED) {
+          pullRequests = pullRequests.filter((pr) => pr.status === PrStatus.CLOSED);
         }
 
         if (search) {
@@ -155,10 +172,15 @@ const app = new Hono()
           );
         }
 
+        // If GitHub returned a full page there are likely more results
+        const hasNextPage = prsFromGit.length === PAGE_SIZE;
+
         return c.json({
           data: {
             documents: pullRequests,
             total: pullRequests.length,
+            hasNextPage,
+            page: pageNumber,
           },
         });
       } catch (error) {

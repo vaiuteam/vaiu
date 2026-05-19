@@ -8,6 +8,7 @@ interface useGetPullRequestsProps {
   status?: PrStatus | null;
   search?: string | null;
   enabled?: boolean;
+  page?: number;
 }
 export const useGetPullRequests = ({
   workspaceId,
@@ -15,6 +16,7 @@ export const useGetPullRequests = ({
   status,
   search,
   enabled = true,
+  page = 1,
 }: useGetPullRequestsProps) => {
   const query = useQuery({
     queryKey: [
@@ -23,6 +25,7 @@ export const useGetPullRequests = ({
       projectId,
       status,
       search,
+      page,
     ],
     queryFn: async () => {
       const response = await client.api.v1["pull-requests"].$get({
@@ -31,6 +34,7 @@ export const useGetPullRequests = ({
           projectId,
           status: status ?? undefined,
           search: search ?? undefined,
+          page: String(page),
         },
       });
       if (!response.ok) {

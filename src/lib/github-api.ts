@@ -22,9 +22,9 @@ import { getInstallationTokenForWorkspace as _getInstallationTokenForWorkspace }
  * Returns null if no GitHub App installation is connected to the workspace.
  */
 export async function getInstallationToken(
-  workspaceId: string,
+    workspaceId: string,
 ): Promise<string | null> {
-  return _getInstallationTokenForWorkspace(workspaceId);
+    return _getInstallationTokenForWorkspace(workspaceId);
 }
 
 export async function getAccessToken(userId: string): Promise<string | null> {
@@ -390,16 +390,18 @@ export async function listPullRequests(
     accessToken: string,
     owner: string,
     repo: string,
-    state: "open" | "closed" | "all" = "all"
+    state: "open" | "closed" | "all" = "all",
+    page: number = 1,
+    perPage: number = 30
 ) {
     const octokit = new Octokit({ auth: accessToken });
 
-    // Use pagination to fetch all PRs (GitHub default is 30 per page, max is 100)
-    const pullRequests = await octokit.paginate(octokit.rest.pulls.list, {
+    const { data: pullRequests } = await octokit.rest.pulls.list({
         owner,
         repo,
         state,
-        per_page: 100, // Maximum allowed by GitHub API
+        per_page: Math.min(perPage, 100),
+        page,
     });
 
     return pullRequests;

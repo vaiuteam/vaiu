@@ -10,6 +10,8 @@ interface useGetIssuesProps {
   dueDate?: string | null;
   search?: string | null;
   enabled?: boolean;
+  page?: number;
+  limit?: number;
 }
 export const useGetIssues = ({
   workspaceId,
@@ -19,6 +21,8 @@ export const useGetIssues = ({
   search,
   status,
   enabled = true,
+  page = 0,
+  limit = 20,
 }: useGetIssuesProps) => {
   const query = useQuery({
     queryKey: [
@@ -29,6 +33,8 @@ export const useGetIssues = ({
       search,
       assigneeId,
       dueDate,
+      page,
+      limit,
     ],
     queryFn: async () => {
       const response = await client.api.v1.issues.$get({
@@ -39,6 +45,8 @@ export const useGetIssues = ({
           search: search ?? undefined,
           assigneeId: assigneeId ?? undefined,
           dueDate: dueDate ?? undefined,
+          page: String(page),
+          limit: String(limit),
         },
       });
       if (!response.ok) {

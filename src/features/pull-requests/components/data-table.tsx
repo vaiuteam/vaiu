@@ -7,7 +7,6 @@ import {
   flexRender,
   SortingState,
   getCoreRowModel,
-  getPaginationRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
@@ -27,21 +26,32 @@ import { Button } from "@/components/ui/button";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  /** Current 1-based page number (server-side). */
+  page?: number;
+  /** Whether there is a next page available. */
+  hasNextPage?: boolean;
+  /** Called when user clicks Previous / Next. */
+  onPageChange?: (page: number) => void;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  page = 1,
+  hasNextPage = false,
+  onPageChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   );
+
+  const isServerPaginated = typeof onPageChange === "function";
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
@@ -106,11 +116,16 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
+        {isServerPaginated && (
+          <span className="mr-auto text-sm text-muted-foreground">
+            Page {page}
+          </span>
+        )}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => isServerPaginated ? onPageChange(page - 1) : undefined}
+          disabled={!isServerPaginated || page <= 1}
           className="bg-slate-200 text-black hover:bg-black"
         >
           Previous
@@ -118,8 +133,8 @@ export function DataTable<TData, TValue>({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
+          onClick={() => isServerPaginated ? onPageChange(page + 1) : undefined}
+          disabled={!isServerPaginated || !hasNextPage}
           className="bg-slate-200 text-black"
         >
           Next

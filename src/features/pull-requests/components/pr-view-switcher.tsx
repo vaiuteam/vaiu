@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useQueryState } from "nuqs";
 import { PlusIcon } from "lucide-react";
 
@@ -28,11 +29,19 @@ export const PrViewSwitcher = () => {
 
   const { openPr } = useCreatePrModal();
 
+  const [page, setPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [status, search]);
+
   const { data: prs, isLoading: prsLoading } = useGetPullRequests({
     workspaceId,
     projectId,
     status,
     search,
+    page,
   });
 
   const handleCreatePr = async () => {
@@ -88,7 +97,13 @@ export const PrViewSwitcher = () => {
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable columns={columns} data={prs?.documents ?? []} />
+              <DataTable
+                columns={columns}
+                data={prs?.documents ?? []}
+                page={page}
+                hasNextPage={prs?.hasNextPage ?? false}
+                onPageChange={setPage}
+              />
             </TabsContent>
           </>
         )}

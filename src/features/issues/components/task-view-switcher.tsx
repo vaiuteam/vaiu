@@ -1,5 +1,5 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryState } from "nuqs";
 import { PlusIcon, RefreshCw } from "lucide-react";
 
@@ -51,6 +51,14 @@ export const TaskViewSwitcher = ({
   const { mutate: bulkUpdate } = useBulkUpdateTasks();
   const { mutate: syncIssues, isPending: isSyncing } = useFetchIssues();
 
+  const PAGE_SIZE = 20;
+  const [pageIndex, setPageIndex] = useState(0);
+
+  // Reset to page 0 whenever any filter changes
+  useEffect(() => {
+    setPageIndex(0);
+  }, [status, dueDate, assigneeId, projectId, search]);
+
   const { data: tasks, isLoading: tasksLoading } = useGetIssues({
     workspaceId,
     assigneeId,
@@ -58,6 +66,8 @@ export const TaskViewSwitcher = ({
     dueDate,
     status,
     search,
+    page: pageIndex,
+    limit: PAGE_SIZE,
   });
 
   const handleSyncWithGitHub = () => {
@@ -148,7 +158,14 @@ export const TaskViewSwitcher = ({
         ) : (
           <>
             <TabsContent value="table" className="mt-0">
-              <DataTable columns={columns} data={tasks?.documents ?? []} />
+              <DataTable
+                columns={columns}
+                data={tasks?.documents ?? []}
+                totalCount={tasks?.total}
+                pageIndex={pageIndex}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPageIndex}
+              />
             </TabsContent>
             <TabsContent value="kanban" className="mt-0">
               <DataKanban
