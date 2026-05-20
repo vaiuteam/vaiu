@@ -885,39 +885,27 @@ const app = new Hono()
           return c.json({ error: "Only Admin can move issue to Done" }, 403);
         }
 
-        if (isMovingToDone && (isSuper || member?.role === "ADMIN") && existing.issueType === "github") {
-          const project = await databases.getDocument<Project>(
-            DATABASE_ID,
-            PROJECTS_ID,
-            existing.projectId,
-          );
-
-          // Use installation token for the read; user token for the write
-          const readToken =
-            (await getInstallationToken(workspaceId)) ||
-            (await getAccessToken(user.$id));
-          const writeToken = await getAccessToken(user.$id);
-
-          if (readToken && project.owner) {
-            const issuesFromGit = await listRepositoryIssues(
-              readToken,
-              project.owner,
-              project.name,
+        if (isMovingToDone && (isSuper || member?.role === "ADMIN") && existing.issueType === "github" && existing.number) {
+          try {
+            const project = await databases.getDocument<Project>(
+              DATABASE_ID,
+              PROJECTS_ID,
+              existing.projectId,
             );
 
-            const currentIssue = issuesFromGit.find(
-              (issue) => issue.title === existing.name,
-            );
+            const writeToken = await getAccessToken(user.$id);
 
-            if (currentIssue && writeToken) {
+            if (writeToken && project.owner) {
               await updateIssue(
                 writeToken,
                 project.owner,
                 project.name,
-                currentIssue.number,
+                existing.number,
                 { state: "closed" },
               );
             }
+          } catch (error) {
+            console.error(`Error syncing issue #${existing.number} to GitHub:`, error);
           }
         }
       }
