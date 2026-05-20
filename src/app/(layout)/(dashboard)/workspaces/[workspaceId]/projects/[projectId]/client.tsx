@@ -251,33 +251,6 @@ export const ProjectIdClient = () => {
 
       {analytics && <Analytics data={analytics} />}
 
-      {project.projectType === "vaiu" ? (
-        <TaskViewSwitcher hideProjectFilter />
-      ) : (
-        <Tabs defaultValue="issues" className="w-full">
-          <TabsList className="h-11 w-full overflow-hidden rounded-2xl bg-background/45 p-1 backdrop-blur-sm lg:w-auto">
-            <TabsTrigger
-              value="issues"
-              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
-            >
-              Issues
-            </TabsTrigger>
-            <TabsTrigger
-              value="pull-requests"
-              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
-            >
-              Pull Requests
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="issues">
-            <TaskViewSwitcher hideProjectFilter />
-          </TabsContent>
-          <TabsContent value="pull-requests">
-            <PrViewSwitcher />
-          </TabsContent>
-        </Tabs>
-      )}
-
       {/* Readme Display */}
       {readmeContent ? (
         <Card className="mt-2 overflow-hidden border-none bg-[linear-gradient(180deg,rgba(255,255,255,0.05),transparent),hsl(var(--card))] shadow-none dark:shadow-[0_22px_55px_-35px_rgba(15,23,42,0.75)]">
@@ -479,6 +452,34 @@ export const ProjectIdClient = () => {
           </Button>
         </Card>
       )}
+
+      {project.projectType === "vaiu" ? (
+        <TaskViewSwitcher hideProjectFilter />
+      ) : (
+        <Tabs defaultValue="issues" className="w-full">
+          <TabsList className="h-11 w-full overflow-hidden rounded-2xl bg-background/45 p-1 backdrop-blur-sm lg:w-auto">
+            <TabsTrigger
+              value="issues"
+              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
+            >
+              Issues
+            </TabsTrigger>
+            <TabsTrigger
+              value="pull-requests"
+              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
+            >
+              Pull Requests
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="issues">
+            <TaskViewSwitcher hideProjectFilter />
+          </TabsContent>
+          <TabsContent value="pull-requests">
+            <PrViewSwitcher />
+          </TabsContent>
+        </Tabs>
+      )}
+
     </div>
   );
 };

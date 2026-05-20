@@ -54,7 +54,7 @@ const FAQPage = () => {
       id: "support",
       question: "How can I get help or report issues?",
       answer:
-        "Our support team is here to help! Visit our contact page, email us at contact@vaiu.com, or check our documentation and blog for answers. For bug reports, you can also open an issue on our GitHub repository.",
+        "Our support team is here to help! Visit our contact page, email us at contact.vaiuteam@gmail.com, or check our documentation and blog for answers. For bug reports, you can also open an issue on our GitHub repository.",
     },
     {
       id: "mobile",

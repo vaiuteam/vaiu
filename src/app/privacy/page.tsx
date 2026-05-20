@@ -128,8 +128,8 @@ export default function PrivacyPage() {
                         </h2>
                         <p>
                             If you have any questions about this Privacy Policy, please contact us at{" "}
-                            <a href="mailto:contact@vaiu.com" className="text-blue-600 dark:text-blue-400 hover:underline">
-                                contact@vaiu.com
+                            <a href="mailto:contact.vaiuteam@gmail.com" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                contact.vaiuteam@gmail.com
                             </a>
                         </p>
                     </section>

@@ -76,7 +76,7 @@ const Footer = () => {
                   </a>
                 ))}
                 <a
-                  href="mailto:contact@vaiu.com"
+                  href="mailto:contact.vaiuteam@gmail.com"
                   className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
                 >
                   Email
