@@ -8,6 +8,11 @@ type GetTestsResponseType = InferResponseType<
     200
 >;
 
+type GetProjectTestsResponseType = InferResponseType<
+    (typeof client.api.v1)["pull-requests"][":projectId"]["tests"]["$get"],
+    200
+>;
+
 export const useGetPRTests = (projectId: string, prNumber: number) => {
     return useQuery<GetTestsResponseType>({
         queryKey: ["pr-tests", projectId, prNumber],
@@ -22,6 +27,24 @@ export const useGetPRTests = (projectId: string, prNumber: number) => {
 
             return await response.json();
         },
+    });
+};
+
+export const useGetProjectTests = (projectId: string) => {
+    return useQuery<GetProjectTestsResponseType>({
+        queryKey: ["project-tests", projectId],
+        queryFn: async () => {
+            const response = await client.api.v1["pull-requests"][":projectId"]["tests"].$get({
+                param: { projectId },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch project tests");
+            }
+
+            return await response.json();
+        },
+        enabled: Boolean(projectId),
     });
 };
 
@@ -91,11 +114,10 @@ export const useUpdateTest = () => {
 
             return await response.json();
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             toast.success("Test updated successfully");
-            queryClient.invalidateQueries({
-                queryKey: ["pr-tests"],
-            });
+            queryClient.invalidateQueries({ queryKey: ["pr-tests"] });
+            queryClient.invalidateQueries({ queryKey: ["project-tests", variables.param.projectId] });
         },
         onError: (error) => {
             toast.error(error.message || "Failed to update test");
@@ -129,11 +151,10 @@ export const useDeleteTest = () => {
 
             return await response.json();
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
             toast.success("Test deleted successfully");
-            queryClient.invalidateQueries({
-                queryKey: ["pr-tests"],
-            });
+            queryClient.invalidateQueries({ queryKey: ["pr-tests"] });
+            queryClient.invalidateQueries({ queryKey: ["project-tests", variables.param.projectId] });
         },
         onError: (error) => {
             toast.error(error.message || "Failed to delete test");

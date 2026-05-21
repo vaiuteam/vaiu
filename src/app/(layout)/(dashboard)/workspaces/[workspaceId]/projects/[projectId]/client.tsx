@@ -16,6 +16,7 @@ import ReactMarkdown from "react-markdown";
 import { ProjectAvatar } from "@/features/projects/components/project-avatar";
 import { SourceTypeBadge } from "@/components/type-badge";
 import { PrViewSwitcher } from "@/features/pull-requests/components/pr-view-switcher";
+import { TestsView } from "@/features/pull-requests/components/tests-view";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TaskViewSwitcher } from "@/features/issues/components/task-view-switcher";
 import { Button } from "@/components/ui/button";
@@ -268,12 +269,21 @@ export const ProjectIdClient = () => {
             >
               Pull Requests
             </TabsTrigger>
+            <TabsTrigger
+              value="tests"
+              className="h-9 w-full rounded-xl bg-transparent px-4 text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:shadow-sm lg:w-auto"
+            >
+              Tests
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="issues">
             <TaskViewSwitcher hideProjectFilter />
           </TabsContent>
           <TabsContent value="pull-requests">
             <PrViewSwitcher />
+          </TabsContent>
+          <TabsContent value="tests">
+            <TestsView projectId={project.$id} />
           </TabsContent>
         </Tabs>
       )}

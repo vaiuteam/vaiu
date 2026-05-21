@@ -603,6 +603,68 @@ const app = new Hono()
     }
   )
   .get(
+    "/:projectId/tests",
+    sessionMiddleware,
+    async (c) => {
+      const databases = c.get("databases");
+      const user = c.get("user");
+      const { projectId } = c.req.param();
+
+      try {
+        const { project, access } = await getProjectContext({
+          databases,
+          userId: user.$id,
+          projectId,
+        });
+
+        if (!project) {
+          return c.json({ error: "Project not found" }, 404);
+        }
+
+        if (!access.hasAccess) {
+          return c.json({ error: "Forbidden" }, 403);
+        }
+
+        const tests = await databases.listDocuments(
+          DATABASE_ID,
+          AI_TESTS_ID,
+          [
+            Query.equal("projectId", projectId),
+            Query.equal("isDeleted", false),
+            Query.orderDesc("$createdAt"),
+            Query.limit(500),
+          ]
+        );
+
+        return c.json({
+          data: tests.documents.map((t) => ({
+            $id: t.$id,
+            $createdAt: t.$createdAt,
+            $updatedAt: t.$updatedAt,
+            id: t.$id,
+            projectId: t.projectId,
+            prNumber: t.prNumber,
+            scenarioId: t.scenarioId,
+            title: t.title,
+            description: t.description,
+            type: t.type,
+            prerequisites: t.prerequisites,
+            priority: t.priority,
+            reasoning: t.reasoning,
+            edgeCases: t.edgeCases,
+            isCustom: t.isCustom,
+            isDeleted: t.isDeleted,
+            status: t.status,
+          })),
+          total: tests.total,
+        });
+      } catch (error) {
+        console.error("Failed to fetch project tests:", error);
+        return c.json({ error: "Failed to fetch tests" }, 500);
+      }
+    }
+  )
+  .get(
     "/:projectId/tests/:prNumber",
     sessionMiddleware,
     async (c) => {
@@ -848,10 +910,11 @@ const app = new Hono()
           return c.json({ error: "Forbidden" }, 403);
         }
 
-        await databases.deleteDocument(
+        await databases.updateDocument(
           DATABASE_ID,
           AI_TESTS_ID,
-          testId
+          testId,
+          { isDeleted: true }
         );
 
         return c.json({ success: true });
