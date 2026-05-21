@@ -16,7 +16,11 @@ export const getMember = async ({
     const members = await databases.listDocuments<Member>(
       DATABASE_ID,
       MEMBERS_ID,
-      [Query.equal("workspaceId", workspaceId), Query.equal("userId", userId)],
+      [
+        Query.equal("workspaceId", workspaceId),
+        Query.equal("userId", userId),
+        Query.select(["$id", "$createdAt", "$updatedAt", "workspaceId", "userId", "role", "projectId"]),
+      ],
     );
     return members.documents[0];
   } catch (error: unknown) {
@@ -53,6 +57,7 @@ export const getProjectMember = async ({
         Query.equal("workspaceId", workspaceId),
         Query.contains("projectId", projectId),
         Query.equal("userId", userId),
+        Query.select(["$id", "$createdAt", "$updatedAt", "workspaceId", "userId", "role", "projectId"]),
       ],
     );
     return members.documents[0];
@@ -80,6 +85,7 @@ export const isSuperAdmin = async ({
       Query.equal("userId", userId),
       Query.equal("role", MemberRole.SUPER_ADMIN),
       Query.limit(1),
+      Query.select(["$id"]),
     ]);
 
     return members.documents.length > 0;

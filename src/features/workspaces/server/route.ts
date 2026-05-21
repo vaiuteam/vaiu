@@ -70,6 +70,7 @@ const app = new Hono()
     // Regular users can only see workspaces they're members of
     const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
       Query.equal("userId", user.$id),
+      Query.select(["workspaceId"]),
     ]);
 
     if (members.total == 0) {
@@ -258,6 +259,7 @@ const app = new Hono()
             Query.equal("name", name),
             Query.equal("userId", user.$id),
             Query.limit(1),
+            Query.select(["$id"]),
           ],
         );
 
@@ -393,7 +395,7 @@ const app = new Hono()
     const workspaceMembers = await databases.listDocuments(
       DATABASE_ID,
       MEMBERS_ID,
-      [Query.equal("workspaceId", workspaceId)],
+      [Query.equal("workspaceId", workspaceId), Query.select(["$id", "userId"])],
     );
 
     if (!isSuper) {
@@ -417,7 +419,7 @@ const app = new Hono()
     const workspaceProjects = await databases.listDocuments(
       DATABASE_ID,
       PROJECTS_ID,
-      [Query.equal("workspaceId", workspaceId)],
+      [Query.equal("workspaceId", workspaceId), Query.select(["$id"])],
     );
 
     if (workspaceProjects.total > 0) {
@@ -504,7 +506,7 @@ const app = new Hono()
       const allProjects = await databases.listDocuments(
         DATABASE_ID,
         PROJECTS_ID,
-        [Query.equal("workspaceId", workspaceId)],
+        [Query.equal("workspaceId", workspaceId), Query.select(["$id"])],
       );
       userProjectIds = allProjects.documents.map((project) => project.$id);
 
@@ -512,7 +514,7 @@ const app = new Hono()
       const memberRecords = await databases.listDocuments(
         DATABASE_ID,
         MEMBERS_ID,
-        [Query.equal("userId", user.$id), Query.limit(1)],
+        [Query.equal("userId", user.$id), Query.limit(1), Query.select(["$id"])],
       );
       member = memberRecords.documents[0];
     }
@@ -561,6 +563,7 @@ const app = new Hono()
         Query.contains("projectId", userProjectIds),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Last month's tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -568,11 +571,13 @@ const app = new Hono()
         Query.contains("projectId", userProjectIds),
         Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Total tasks (all time)
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
         Query.equal("workspaceId", workspaceId),
         Query.contains("projectId", userProjectIds),
+        Query.select(["$id"]),
       ]),
       // This month's assigned tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -581,6 +586,7 @@ const app = new Hono()
         Query.equal("assigneeId", member.$id),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Last month's assigned tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -589,6 +595,7 @@ const app = new Hono()
         Query.equal("assigneeId", member.$id),
         Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // This month's incomplete tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -597,6 +604,7 @@ const app = new Hono()
         Query.notEqual("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Last month's incomplete tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -605,6 +613,7 @@ const app = new Hono()
         Query.notEqual("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // This month's completed tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -613,6 +622,7 @@ const app = new Hono()
         Query.equal("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Last month's completed tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -621,6 +631,7 @@ const app = new Hono()
         Query.equal("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // This month's overdue tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -630,6 +641,7 @@ const app = new Hono()
         Query.lessThan("dueDate", now.toISOString()),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
       // Last month's overdue tasks
       databases.listDocuments(DATABASE_ID, ISSUES_ID, [
@@ -639,6 +651,7 @@ const app = new Hono()
         Query.lessThan("dueDate", now.toISOString()),
         Query.greaterThanEqual("$createdAt", lastMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", lastMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ]),
     ]);
 

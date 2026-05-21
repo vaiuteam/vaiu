@@ -152,6 +152,7 @@ const app = new Hono()
           Query.orderDesc("$createdAt"),
           Query.equal("name", name),
           Query.limit(1),
+          Query.select(["$id"]),
         ],
       );
 
@@ -331,6 +332,7 @@ const app = new Hono()
               Query.equal("workspaceId", workspaceId),
               Query.orderAsc("position"),
               Query.limit(1),
+              Query.select(["position"]),
             ],
           );
 
@@ -547,7 +549,7 @@ const app = new Hono()
       const memberRecords = await databases.listDocuments(
         DATABASE_ID,
         MEMBERS_ID,
-        [Query.equal("userId", user.$id), Query.limit(1)],
+        [Query.equal("userId", user.$id), Query.limit(1), Query.select(["$id"])],
       );
       member = memberRecords.documents[0] ?? null;
       if (!member) {
@@ -570,11 +572,13 @@ const app = new Hono()
         Query.equal("projectId", projectId),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ],
     );
 
     const totalTasks = await databases.listDocuments(DATABASE_ID, ISSUES_ID, [
       Query.equal("projectId", projectId),
+      Query.select(["$id"]),
     ]);
 
     const totalTaskCount = totalTasks.total;
@@ -588,6 +592,7 @@ const app = new Hono()
         Query.equal("assigneeId", member.$id),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ],
     );
     const totalAssignedTasks = await databases.listDocuments(
@@ -596,6 +601,7 @@ const app = new Hono()
       [
         Query.equal("projectId", projectId),
         Query.equal("assigneeId", member.$id),
+        Query.select(["$id"]),
       ],
     );
 
@@ -610,6 +616,7 @@ const app = new Hono()
         Query.notEqual("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ],
     );
     const totalIncompleteTasks = await databases.listDocuments(
@@ -618,6 +625,7 @@ const app = new Hono()
       [
         Query.equal("projectId", projectId),
         Query.notEqual("status", IssueStatus.DONE),
+        Query.select(["$id"]),
       ],
     );
 
@@ -632,6 +640,7 @@ const app = new Hono()
         Query.equal("status", IssueStatus.DONE),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ],
     );
     const totalCompletedTasks = await databases.listDocuments(
@@ -640,6 +649,7 @@ const app = new Hono()
       [
         Query.equal("projectId", projectId),
         Query.equal("status", IssueStatus.DONE),
+        Query.select(["$id"]),
       ],
     );
 
@@ -655,6 +665,7 @@ const app = new Hono()
         Query.lessThan("dueDate", now.toISOString()),
         Query.greaterThanEqual("$createdAt", thisMonthStart.toISOString()),
         Query.lessThanEqual("$createdAt", thisMonthEnd.toISOString()),
+        Query.select(["$id"]),
       ],
     );
     const totalOverDueTasks = await databases.listDocuments(
@@ -664,6 +675,7 @@ const app = new Hono()
         Query.equal("projectId", projectId),
         Query.notEqual("status", IssueStatus.DONE),
         Query.lessThan("dueDate", now.toISOString()),
+        Query.select(["$id"]),
       ],
     );
 
@@ -779,6 +791,7 @@ const app = new Hono()
       [
         Query.equal("workspaceId", existingProject.workspaceId),
         Query.contains("projectId", projectId),
+        Query.select(["$id", "projectId", "userId", "workspaceId"]),
       ],
     );
 
@@ -818,7 +831,7 @@ const app = new Hono()
     const projectIssues = await databases.listDocuments(
       DATABASE_ID,
       ISSUES_ID,
-      [Query.equal("projectId", projectId)],
+      [Query.equal("projectId", projectId), Query.select(["$id"])],
     );
 
     if (projectIssues.total > 0) {

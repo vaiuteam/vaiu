@@ -168,7 +168,7 @@ const app = new Hono()
           const allProjects = await databases.listDocuments(
             DATABASE_ID,
             PROJECTS_ID,
-            [Query.equal("workspaceId", workspaceId)],
+            [Query.equal("workspaceId", workspaceId), Query.select(["$id"])],
           );
           accessibleProjectIds = allProjects.documents.map((project) => project.$id);
         } else {
@@ -180,7 +180,7 @@ const app = new Hono()
         const allProjects = await databases.listDocuments(
           DATABASE_ID,
           PROJECTS_ID,
-          [Query.equal("workspaceId", workspaceId)],
+          [Query.equal("workspaceId", workspaceId), Query.select(["$id"])],
         );
         accessibleProjectIds = allProjects.documents.map((project) => project.$id);
       }
@@ -354,6 +354,7 @@ const app = new Hono()
           [
             Query.equal("$id", projectId),
             Query.equal("workspaceId", workspaceId),
+            Query.select(["$id", "projectType"]),
           ],
         );
 
