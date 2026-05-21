@@ -339,7 +339,7 @@ const app = new Hono()
               ? highestPositionTask.documents[0].position + 1000
               : 1000;
 
-          const BATCH_SIZE = 25;
+          const BATCH_SIZE = 20;
           for (let i = 0; i < issues.length; i += BATCH_SIZE) {
             const batch = issues.slice(i, i + BATCH_SIZE);
             await Promise.all(
@@ -351,12 +351,16 @@ const app = new Hono()
                   dueDate: new Date().toISOString(),
                   workspaceId,
                   projectId: project.$id,
-                  assigneeId: issue?.assignee?.login,
+                  assigneeId: issue?.assignee?.login ?? null,
                   position: newPosition,
                   number: issue.number,
                 })
               )
             );
+            // Pause between batches to stay within Appwrite rate limits
+            if (i + BATCH_SIZE < issues.length) {
+              await new Promise((res) => setTimeout(res, 500));
+            }
           }
           console.log(`Successfully imported ${issues.length} issues for project ${project.$id}`);
         } catch (error) {

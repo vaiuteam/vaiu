@@ -249,12 +249,12 @@ export async function addCollaborator(
  * List issues for a repository
  */
 export async function listRepositoryIssues(
-    accessToken: string,
+    accessToken: string | null,
     owner: string,
     repo: string,
     state?: "open" | "closed" | "all"
 ) {
-    const octokit = new Octokit({ auth: accessToken });
+    const octokit = new Octokit({ auth: accessToken ?? undefined });
 
     // Use pagination to fetch all issues (GitHub default is 30 per page, max is 100)
     const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
@@ -387,14 +387,14 @@ export async function addIssueAssignees(
  * List pull requests for a repository
  */
 export async function listPullRequests(
-    accessToken: string,
+    accessToken: string | null,
     owner: string,
     repo: string,
     state: "open" | "closed" | "all" = "all",
     page: number = 1,
     perPage: number = 30
 ) {
-    const octokit = new Octokit({ auth: accessToken });
+    const octokit = new Octokit({ auth: accessToken ?? undefined });
 
     const { data: pullRequests } = await octokit.rest.pulls.list({
         owner,

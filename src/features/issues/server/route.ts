@@ -977,19 +977,12 @@ const app = new Hono()
           }
         }
 
-        // Prefer installation token for reads; fall back to user OAuth token
+        // Prefer installation token, fall back to user OAuth token, then unauthenticated
+        // (unauthenticated still works for public repos, just at 60 req/hr rate limit)
         const githubToken =
           (await getInstallationToken(project.workspaceId)) ||
-          (await getAccessToken(user.$id));
-
-        if (!githubToken) {
-          return c.json(
-            {
-              error: "GitHub not connected. Connect GitHub in workspace settings or sign in with GitHub.",
-            },
-            400,
-          );
-        }
+          (await getAccessToken(user.$id)) ||
+          null;
 
         const issuesFromGit = await listRepositoryIssues(
           githubToken,
