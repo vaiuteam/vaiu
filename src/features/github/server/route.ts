@@ -147,7 +147,7 @@ async function handleIssueEvent(
 
   if (!["opened", "closed", "reopened", "edited"].includes(action)) return;
 
-  const status: IssueStatus = issue.state === "closed" ? IssueStatus.DONE : IssueStatus.TODO;
+  const status: IssueStatus = issue.state === "closed" ? IssueStatus.DONE : IssueStatus.BACKLOG;
 
   const existing = await databases.listDocuments(DATABASE_ID, ISSUES_ID, [
     Query.equal("projectId", projectId),
@@ -158,12 +158,11 @@ async function handleIssueEvent(
   if (existing.documents.length > 0) {
     await databases.updateDocument(DATABASE_ID, ISSUES_ID, existing.documents[0].$id, {
       name: issue.title,
-      description: issue.body ?? "",
       status,
     });
   } else if (action === "opened") {
     const highest = await databases.listDocuments(DATABASE_ID, ISSUES_ID, [
-      Query.equal("status", IssueStatus.TODO),
+      Query.equal("status", IssueStatus.BACKLOG),
       Query.equal("workspaceId", workspaceId),
       Query.orderDesc("position"),
       Query.limit(1),
@@ -174,13 +173,13 @@ async function handleIssueEvent(
 
     await databases.createDocument(DATABASE_ID, ISSUES_ID, ID.unique(), {
       name: issue.title,
-      description: issue.body ?? "",
+      issueType: "github",
       status,
       workspaceId,
       projectId,
       number: issue.number,
       position,
-      dueDate: new Date().toISOString(),
+      dueDate: null,
     });
   }
 }

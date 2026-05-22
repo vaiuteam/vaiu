@@ -7,7 +7,7 @@ export type Issue = Models.Document & {
   workspaceId: string;
   projectId: string;
   position: number;
-  dueDate: string;
+  dueDate: string | null;
   description?: string;
   number?: number;
   issueType: "vaiu" | "github";

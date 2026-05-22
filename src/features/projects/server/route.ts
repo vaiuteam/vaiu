@@ -323,7 +323,7 @@ const app = new Hono()
           const issues = await listRepositoryIssues(validationToken!, repoOwner, repoName);
           if (issues.length === 0) return;
 
-          const status = IssueStatus.TODO;
+          const status = IssueStatus.BACKLOG;
           const highestPositionTask = await databases.listDocuments(
             DATABASE_ID,
             ISSUES_ID,
@@ -348,9 +348,9 @@ const app = new Hono()
               batch.map((issue) =>
                 databases.createDocument(DATABASE_ID, ISSUES_ID, ID.unique(), {
                   name: issue.title,
-                  description: issue.body,
+                  issueType: "github",
                   status,
-                  dueDate: new Date().toISOString(),
+                  dueDate: null,
                   workspaceId,
                   projectId: project.$id,
                   assigneeId: issue?.assignee?.login ?? null,

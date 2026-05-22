@@ -359,6 +359,25 @@ export async function listIssueComments(
     return comments;
 }
 
+export async function createIssueComment(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    body: string
+) {
+    const octokit = new Octokit({ auth: accessToken });
+
+    const { data: comment } = await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body,
+    });
+
+    return comment;
+}
+
 /**
  * Add assignees to an issue
  */
