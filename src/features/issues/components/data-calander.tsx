@@ -83,20 +83,22 @@ const CustomToolbar = ({ label, onNavigate }: CustomToolbarProps) => {
 
 export const DataCalander = ({ data }: DataCalendarProps) => {
   const [cursor, setCursor] = useState(
-    () => (data.length > 0 ? new Date(data[0].dueDate) : new Date()),
+    () => new Date(),
   );
 
   const events = useMemo(
     () =>
-      data.map((task: Issue) => ({
-        start: new Date(task.dueDate),
-        end: new Date(task.dueDate),
-        title: task.name,
-        project: task.project,
-        assignee: task.assignee,
-        status: task.status,
-        id: task.$id,
-      })),
+      data
+        .filter((task: Issue) => !!task.dueDate)
+        .map((task: Issue) => ({
+          start: new Date(task.dueDate!),
+          end: new Date(task.dueDate!),
+          title: task.name,
+          project: task.project,
+          assignee: task.assignee,
+          status: task.status,
+          id: task.$id,
+        })),
     [data],
   );
 

@@ -137,7 +137,7 @@ export const columns: ColumnDef<Issue>[] = [
       );
     },
     cell: ({ row }) => {
-      const dueDate = row.original.dueDate;
+      const dueDate = row.original.dueDate ?? null;
       return <TaskDate value={dueDate} />;
     },
   },

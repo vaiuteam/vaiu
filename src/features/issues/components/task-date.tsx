@@ -8,7 +8,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 
 interface TaskDateProps {
-  value: string;
+  value: string | null;
   className?: string;
 }
 
@@ -51,9 +51,9 @@ function statusHint(diffDays: number): string {
 }
 
 export const TaskDate = ({ value, className }: TaskDateProps) => {
-  const parsed = new Date(value);
+  const parsed = value ? new Date(value) : null;
 
-  if (!isValid(parsed)) {
+  if (!parsed || !isValid(parsed)) {
     return (
       <span className={cn("text-xs text-muted-foreground", className)}>—</span>
     );
