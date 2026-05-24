@@ -24,13 +24,13 @@ import {
   getAccessToken,
   getInstallationToken,
   getAuthenticatedUser,
-  listRepositoryIssues,
   updateIssue,
   createIssue,
   getIssue,
   listIssueComments,
   createIssueComment,
 } from "@/lib/github-api";
+import { syncGithubIssueMetadata } from "./github-issue-import";
 
 const app = new Hono()
   .delete("/:issueId", sessionMiddleware, async (c) => {
@@ -1042,194 +1042,25 @@ const app = new Hono()
           (await getAccessToken(user.$id)) ||
           null;
 
-        const issuesFromGit = await listRepositoryIssues(
+        const summary = await syncGithubIssueMetadata({
+          databases,
           githubToken,
-          project.owner,
-          project.name,
-          "all", // Get both open and closed issues for sync
-        );
-
-        const issuesFromDb = await databases.listDocuments<Issue>(
-          DATABASE_ID,
-          ISSUES_ID,
-          [Query.equal("projectId", projectId)],
-        );
-
-        // Check for new issues to create (only open issues)
-        const openIssuesFromGit = issuesFromGit.filter(
-          (issue) => issue.state === "open",
-        );
-
-        const issuesToCreate = openIssuesFromGit.filter((gitIssue) => {
-          return !issuesFromDb.documents.some(
-            (dbIssue) =>
-              dbIssue.number === gitIssue.number ||
-              dbIssue.name === gitIssue.title,
-          );
+          owner: project.owner,
+          repo: project.name,
+          workspaceId: project.workspaceId,
+          projectId,
+          state: "all",
         });
-
-        // Check for status updates (GitHub issues that were closed should be marked as DONE)
-        const issuesToUpdate = issuesFromDb.documents.filter((dbIssue) => {
-          const gitIssue = issuesFromGit.find(
-            (issue) =>
-              issue.number === dbIssue.number || issue.title === dbIssue.name,
-          );
-
-          if (gitIssue) {
-            // Only update if GitHub issue is closed but DB issue is not DONE
-            if (
-              gitIssue.state === "closed" &&
-              dbIssue.status !== IssueStatus.DONE
-            ) {
-              return true;
-            }
-            // Only update if GitHub issue is reopened AND the DB issue was marked as DONE
-            // This prevents overwriting IN_PROGRESS, IN_REVIEW, etc.
-            if (
-              gitIssue.state === "open" &&
-              dbIssue.status === IssueStatus.DONE
-            ) {
-              return true;
-            }
-            // If DB issue is missing the number, update it (metadata only)
-            if (!dbIssue.number && gitIssue.number) {
-              return true;
-            }
-          }
-          return false;
-        });
-
-        // Update existing issues with status changes in batches
-        const UPDATE_BATCH_SIZE = 50;
-        const updatedIssues = [];
-
-        for (let i = 0; i < issuesToUpdate.length; i += UPDATE_BATCH_SIZE) {
-          const batch = issuesToUpdate.slice(i, i + UPDATE_BATCH_SIZE);
-
-          const batchResults = await Promise.all(
-            batch.map(async (dbIssue) => {
-              try {
-                const gitIssue = issuesFromGit.find(
-                  (issue) =>
-                    issue.number === dbIssue.number || issue.title === dbIssue.name,
-                );
-
-                if (gitIssue) {
-                  const updates: Partial<Issue> = {};
-
-                  // Only update status if GitHub is closed (DB → DONE)
-                  // OR if DB is DONE but GitHub reopened (DONE → TODO)
-                  if (
-                    gitIssue.state === "closed" &&
-                    dbIssue.status !== IssueStatus.DONE
-                  ) {
-                    updates.status = IssueStatus.DONE;
-                  } else if (
-                    gitIssue.state === "open" &&
-                    dbIssue.status === IssueStatus.DONE
-                  ) {
-                    // Reopened issue: revert from DONE to TODO only
-                    updates.status = IssueStatus.TODO;
-                  }
-
-                  // Update number if missing
-                  if (!dbIssue.number && gitIssue.number) {
-                    updates.number = gitIssue.number;
-                  }
-
-                  // Only update if there are changes
-                  if (Object.keys(updates).length > 0) {
-                    return databases.updateDocument(
-                      DATABASE_ID,
-                      ISSUES_ID,
-                      dbIssue.$id,
-                      updates,
-                    );
-                  }
-                }
-                return null;
-              } catch (error) {
-                console.error(`Failed to update issue ${dbIssue.$id}:`, error);
-                return null;
-              }
-            }),
-          );
-
-          updatedIssues.push(...batchResults.filter(Boolean));
-        }
-
-        // Helper function to find member by GitHub username
-        const findMemberByGithubUsername = async (githubUsername: string) => {
-          // For now, we'll just use the GitHub username as assigneeId
-          // In the future, this could be enhanced to match against user profiles
-          // that have GitHub usernames stored
-          return githubUsername;
-        };
-
-        // Create new issues in batches to avoid overwhelming the database
-        const CREATE_BATCH_SIZE = 50; // Process 50 issues at a time
-        const newIssues = [];
-
-        for (let i = 0; i < issuesToCreate.length; i += CREATE_BATCH_SIZE) {
-          const batch = issuesToCreate.slice(i, i + CREATE_BATCH_SIZE);
-
-          const batchResults = await Promise.all(
-            batch.map(async (issue) => {
-              try {
-                let assigneeId = null;
-                if (issue.assignee?.login) {
-                  assigneeId = await findMemberByGithubUsername(
-                    issue.assignee.login,
-                  );
-                }
-
-                // Re-check existence by projectId + number to avoid race duplicates
-                const existingWithNumber = await databases
-                  .listDocuments<Issue>(DATABASE_ID, ISSUES_ID, [
-                    Query.equal("projectId", projectId),
-                    Query.equal("number", issue.number),
-                  ])
-                  .catch(() => ({ documents: [] as Issue[] }));
-
-                if (existingWithNumber.documents.length > 0) {
-                  return existingWithNumber.documents[0];
-                }
-
-                // Set due date to 2 weeks from today for imported issues
-                return databases.createDocument(
-                  DATABASE_ID,
-                  ISSUES_ID,
-                  ID.unique(),
-                  {
-                    name: issue.title,
-                    issueType: "github",
-                    status: IssueStatus.BACKLOG,
-                    dueDate: null,
-                    workspaceId: project.workspaceId,
-                    projectId: projectId,
-                    assigneeId: assigneeId,
-                    position: 1000,
-                    number: issue.number,
-                  },
-                );
-              } catch (error) {
-                console.error(`Failed to create issue ${issue.number}:`, error);
-                return null; // Continue with other issues even if one fails
-              }
-            }),
-          );
-
-          newIssues.push(...batchResults.filter(Boolean));
-        }
 
         return c.json({
-          data: issuesFromGit,
-          created: newIssues.length,
-          updated: updatedIssues.filter(Boolean).length,
+          data: summary,
+          created: summary.created,
+          updated: summary.updated,
           summary: {
-            newIssues: newIssues.length,
-            updatedIssues: updatedIssues.filter(Boolean).length,
-            totalGitHubIssues: issuesFromGit.length,
+            newIssues: summary.created,
+            updatedIssues: summary.updated,
+            skippedIssues: summary.skipped,
+            totalGitHubIssues: summary.totalGitHubIssues,
           },
         });
       } catch (error) {

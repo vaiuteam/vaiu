@@ -33,8 +33,8 @@ import {
   deleteRepository,
   getAuthenticatedUser,
   addCollaborator,
-  listRepositoryIssues
 } from "@/lib/github-api";
+import { syncGithubIssueMetadata } from "@/features/issues/server/github-issue-import";
 
 import { checkSubscriptionLimit } from "@/features/subscriptions/utils";
 import { listInstallationRepos } from "@/lib/github-app";
@@ -320,51 +320,20 @@ const app = new Hono()
       // Import issues asynchronously in the background (non-blocking)
       (async () => {
         try {
-          const issues = await listRepositoryIssues(validationToken!, repoOwner, repoName);
-          if (issues.length === 0) return;
+          const summary = await syncGithubIssueMetadata({
+            databases,
+            githubToken: validationToken,
+            owner: repoOwner,
+            repo: repoName,
+            workspaceId,
+            projectId: project.$id,
+            state: "open",
+          });
 
-          const status = IssueStatus.BACKLOG;
-          const highestPositionTask = await databases.listDocuments(
-            DATABASE_ID,
-            ISSUES_ID,
-            [
-              Query.equal("status", status),
-              Query.equal("workspaceId", workspaceId),
-              Query.orderAsc("position"),
-              Query.limit(1),
-              Query.select(["position"]),
-            ],
+          console.log(
+            `Imported GitHub issues for project ${project.$id}:`,
+            summary,
           );
-
-          const newPosition =
-            highestPositionTask.documents.length > 0
-              ? highestPositionTask.documents[0].position + 1000
-              : 1000;
-
-          const BATCH_SIZE = 20;
-          for (let i = 0; i < issues.length; i += BATCH_SIZE) {
-            const batch = issues.slice(i, i + BATCH_SIZE);
-            await Promise.all(
-              batch.map((issue) =>
-                databases.createDocument(DATABASE_ID, ISSUES_ID, ID.unique(), {
-                  name: issue.title,
-                  issueType: "github",
-                  status,
-                  dueDate: null,
-                  workspaceId,
-                  projectId: project.$id,
-                  assigneeId: issue?.assignee?.login ?? null,
-                  position: newPosition,
-                  number: issue.number,
-                })
-              )
-            );
-            // Pause between batches to stay within Appwrite rate limits
-            if (i + BATCH_SIZE < issues.length) {
-              await new Promise((res) => setTimeout(res, 500));
-            }
-          }
-          console.log(`Successfully imported ${issues.length} issues for project ${project.$id}`);
         } catch (error) {
           console.error(`Failed to import issues for project ${project.$id}:`, error);
         }

@@ -264,7 +264,31 @@ export async function listRepositoryIssues(
         per_page: 100, // Maximum allowed by GitHub API
     });
 
-    return issues;
+    return issues.filter((issue) => !issue.pull_request);
+}
+
+export async function listRepositoryIssuesPage(
+    accessToken: string | null,
+    owner: string,
+    repo: string,
+    state: "open" | "closed" | "all" = "open",
+    page: number = 1,
+    perPage: number = 100
+) {
+    const octokit = new Octokit({ auth: accessToken ?? undefined });
+
+    const { data } = await octokit.rest.issues.listForRepo({
+        owner,
+        repo,
+        state,
+        page,
+        per_page: perPage,
+    });
+
+    return {
+        issues: data.filter((issue) => !issue.pull_request),
+        hasNextPage: data.length === perPage,
+    };
 }
 
 /**
