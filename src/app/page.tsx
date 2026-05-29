@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrent } from "@/features/auth/queries";
 
+import BuiltForSection from "@/components/BuiltForSection";
 import Hero from "@/components/Hero";
 import { getWorkspaces } from "@/features/workspaces/queries";
 import { Navbar } from "@/components/mainNavbar";
@@ -18,6 +19,7 @@ export default async function Home() {
       <div className="container mx-auto w-full">
         <Navbar />
         <Hero />
+        <BuiltForSection />
         {/* <Features /> */}
         <BentoGrid />
         {/* <Testimonials /> */}
