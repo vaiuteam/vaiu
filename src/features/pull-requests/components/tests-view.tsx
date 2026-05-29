@@ -129,7 +129,10 @@ export function TestsView({ projectId }: TestsViewProps) {
   const deleteMutation = useDeleteTest();
   const createMutation = useCreateTest();
 
-  const allTests: PersistedTestCase[] = (data?.data ?? []) as PersistedTestCase[];
+  const allTests = useMemo(
+    () => (data?.data ?? []) as PersistedTestCase[],
+    [data?.data],
+  );
 
   const filtered = useMemo(() => {
     return allTests.filter((t) => {

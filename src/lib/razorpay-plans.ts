@@ -1,6 +1,6 @@
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
-import { fetchRazorpaySubscription, razorpay } from "./razorpay";
+import { razorpay } from "./razorpay";
 
 export type RazorpayPlanKey =
     | "PRO_MONTHLY"
@@ -71,7 +71,6 @@ export async function assertRazorpayPlanExists(
 }
 
 export function writeLocalRazorpayPlans(plans: Record<RazorpayPlanKey, string>): void {
-    const { writeFileSync } = require("fs") as typeof import("fs");
     writeFileSync(LOCAL_PLANS_FILE, JSON.stringify(plans, null, 2) + "\n", "utf8");
 }
 
