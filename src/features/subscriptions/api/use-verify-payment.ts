@@ -12,14 +12,23 @@ export const useVerifyPayment = () => {
     const mutation = useMutation<ResponseType, Error, RequestType>({
         mutationFn: async (json) => {
             const response = await client.api.v1.subscriptions.verify.$post({ json });
-            return await response.json();
+            const result = await response.json();
+
+            if (!response.ok || "error" in result) {
+                const message =
+                    "error" in result && typeof result.error === "string"
+                        ? result.error
+                        : "Failed to verify payment";
+                throw new Error(message);
+            }
+
+            return result;
         },
         onSuccess: () => {
-            toast.success("Payment verified successfully");
             queryClient.invalidateQueries({ queryKey: ["subscription"] });
         },
-        onError: () => {
-            toast.error("Failed to verify payment");
+        onError: (error) => {
+            toast.error(error.message || "Failed to verify payment");
         },
     });
 

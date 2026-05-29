@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/email";
 
 const app = new Hono();
 
@@ -13,14 +13,6 @@ const contactSchema = z.object({
 });
 
 type ContactData = z.infer<typeof contactSchema>;
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
 
 app.post("/", zValidator("json", contactSchema), async (c) => {
   try {
@@ -37,15 +29,12 @@ app.post("/", zValidator("json", contactSchema), async (c) => {
       `;
 
     // Send email to team
-    await transporter.sendMail({
-      from: data.email,
-      to: process.env.GMAIL_USER,
+    await sendEmail({
+      to: process.env.GMAIL_USER!,
       subject: `New Contact Form: ${data.subject}`,
       html: teamEmailContent,
-      replyTo: data.email,
     });
 
-    // Send confirmation email to user
     const userEmailContent = `
         <h2>Thank You for Contacting Us</h2>
         <p>Hi ${data.name},</p>
@@ -58,8 +47,8 @@ app.post("/", zValidator("json", contactSchema), async (c) => {
         <p>Best regards,<br>VAIU Team</p>
       `;
 
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER,
+    // Send confirmation email to user
+    await sendEmail({
       to: data.email,
       subject: "We received your message - VAIU",
       html: userEmailContent,

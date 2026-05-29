@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:razorpay-plans": "bun run scripts/setup-razorpay-plans.ts"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",

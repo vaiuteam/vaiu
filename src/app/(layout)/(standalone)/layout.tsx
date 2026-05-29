@@ -4,6 +4,7 @@ import { UserButton } from "@/features/auth/components/user-button";
 import { Logo } from "@/components/Logo";
 import { Logo2 } from "@/components/Logo2";
 import { ModeToggle } from "@/components/ui/ModeToggle";
+import { Button } from "@/components/ui/button";
 
 const StandaloneLayout = async ({ children }: PropsWithChildren) => {
   return (
@@ -14,7 +15,20 @@ const StandaloneLayout = async ({ children }: PropsWithChildren) => {
             <Logo className="dark:hidden" />
             <Logo2 className="hidden dark:block" />
           </Link>
-          <div className="flex items-center justify-center gap-x-4">
+          <div className="flex items-center justify-center gap-x-2 sm:gap-x-4">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link href="/docs">Docs</Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              className="bg-blue-600 font-semibold text-white hover:bg-blue-700"
+            >
+              <Link href="/pricing">Pricing</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+              <Link href="/billing">Billing</Link>
+            </Button>
             <UserButton />
             <ModeToggle />
           </div>

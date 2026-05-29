@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/appwrite";
 import { sessionMiddleware } from "@/lib/session-middleware";
 import { DATABASE_ID, USER_PROFILES_ID } from "@/config";
 import { getAccessToken } from "@/lib/github-api";
+import { sendWelcomeEmail } from "@/lib/emails/welcome";
 
 import { AUTH_COOKIE } from "../constants";
 import {
@@ -166,6 +167,9 @@ const app = new Hono()
         email,
         `${origin}/verify-magic-link`,
       );
+
+      // Welcome email (non-blocking — signup succeeds even if email fails)
+      void sendWelcomeEmail({ name: user.name, email: user.email });
 
       return c.json({ success: true });
     } catch (error: unknown) {

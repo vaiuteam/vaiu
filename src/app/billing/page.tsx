@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import { SubscriptionManagement } from "@/features/subscriptions/components/subscription-management";
 import { UsageStats } from "@/features/subscriptions/components/usage-stats";
 import { useGetCurrentSubscription } from "@/features/subscriptions/api/use-get-current-subscription";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Subscription, UserUsage } from "@/features/subscriptions/types";
 import { BillingPageSkeleton } from "@/components/loading-skeletons";
+import { MarketingPageLayout } from "@/components/marketing-page-layout";
 
 export default function BillingPage() {
     const router = useRouter();
@@ -16,49 +16,46 @@ export default function BillingPage() {
     const { data: usage, isLoading: loadingUsage } = useGetUsage();
 
     if (loadingSubscription || loadingUsage) {
-        return <BillingPageSkeleton />;
+        return (
+            <MarketingPageLayout>
+                <BillingPageSkeleton />
+            </MarketingPageLayout>
+        );
     }
 
     if (!subscription || !usage) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p className="text-muted-foreground">Failed to load subscription data</p>
-            </div>
+            <MarketingPageLayout>
+                <div className="flex min-h-[50vh] items-center justify-center">
+                    <p className="text-muted-foreground">Failed to load subscription data</p>
+                </div>
+            </MarketingPageLayout>
         );
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.push("/")}
-                    className="mb-8"
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Go to Home
-                </Button>
-
-                <div className="space-y-8">
+        <MarketingPageLayout>
+            <div className="mx-auto max-w-7xl space-y-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold">Billing & Subscription</h1>
-                        <p className="text-muted-foreground mt-2">
+                        <p className="mt-2 text-muted-foreground">
                             Manage your subscription and view usage statistics
                         </p>
                     </div>
+                    <Button
+                        onClick={() => router.push("/pricing")}
+                        className="bg-blue-600 font-semibold hover:bg-blue-700"
+                    >
+                        Upgrade Plan
+                    </Button>
+                </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <SubscriptionManagement subscription={subscription as Subscription} />
-                        <UsageStats subscription={subscription as Subscription} usage={usage as UserUsage} />
-                    </div>
-
-                    {/* <div className="flex justify-center">
-                        <Button onClick={() => router.push("/pricing")} size="lg">
-                            Upgrade Plan
-                        </Button>
-                    </div> */}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <SubscriptionManagement subscription={subscription as Subscription} />
+                    <UsageStats subscription={subscription as Subscription} usage={usage as UserUsage} />
                 </div>
             </div>
-        </div>
+        </MarketingPageLayout>
     );
 }

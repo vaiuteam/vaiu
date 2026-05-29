@@ -1,11 +1,12 @@
 "use client";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import { UserButton } from "@/features/auth/components/user-button";
 
-// import { MobileSidebar } from "./mobile-sidebar";
 import { ModeToggle } from "./ui/ModeToggle";
 import { SidebarTrigger } from "./ui/sidebar";
+import { Button } from "./ui/button";
 
 // import { NotificationBell } from "@/features/notifications/components/notification-bell";
 
@@ -40,7 +41,14 @@ export const Navbar = () => {
           </p>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-x-4">
+      <div className="flex items-center justify-center gap-x-2 sm:gap-x-3">
+        <Button
+          asChild
+          size="sm"
+          className="hidden bg-blue-600 font-semibold text-white hover:bg-blue-700 sm:inline-flex"
+        >
+          <Link href="/pricing">Pricing</Link>
+        </Button>
         {/* <NotificationBell /> */}
         <UserButton />
         <ModeToggle />

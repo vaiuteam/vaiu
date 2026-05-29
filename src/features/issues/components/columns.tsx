@@ -41,7 +41,7 @@ export const columns: ColumnDef<Issue>[] = [
             href={`https://github.com/${project.owner}/${project.name}/issues/${number}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:underline"
+            className="block min-w-0 hover:underline"
           >
             <p className="line-clamp-1">#{number} {name}</p>
           </Link>
@@ -50,8 +50,8 @@ export const columns: ColumnDef<Issue>[] = [
         );
 
       return (
-        <div className="flex items-center gap-2">
-          {titleNode}
+        <div className="flex min-w-0 max-w-full items-center gap-2">
+          <div className="min-w-0 flex-1">{titleNode}</div>
           <SourceTypeBadge type={issueType} kind="issue" showIcon={false} />
         </div>
       );

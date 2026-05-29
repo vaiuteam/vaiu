@@ -1,5 +1,5 @@
 "use client";
-import { LogOut, Navigation } from "lucide-react";
+import { LogOut, Navigation, CreditCard, Tag } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -65,21 +65,34 @@ export const UserButton = () => {
           </div>
         </div>
         <Separator className="mb-1" />
-        <div className="flex">
-          <DropdownMenuItem onClick={() => {
-            router.push(`/profile/${user.name}`); 
-          }} className="h-10 flex items-center justify-center text-gray-900 dark:text-gray-100 font-medium cursor-pointer">
-            <Navigation className="size-4 mr-2" />
-            View Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logout()}
-            className="h-10 flex items-center justify-center text-amber-700 font-medium cursor-pointer"
-          >
-            <LogOut className="size-4 mr-2" />
-            Log Out
-          </DropdownMenuItem>
-        </div>
+        <DropdownMenuItem
+          onClick={() => router.push("/pricing")}
+          className="h-10 cursor-pointer font-medium text-gray-900 dark:text-gray-100"
+        >
+          <Tag className="mr-2 size-4" />
+          Pricing
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => router.push("/billing")}
+          className="h-10 cursor-pointer font-medium text-gray-900 dark:text-gray-100"
+        >
+          <CreditCard className="mr-2 size-4" />
+          Billing
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => router.push(`/profile/${user.name}`)}
+          className="h-10 cursor-pointer font-medium text-gray-900 dark:text-gray-100"
+        >
+          <Navigation className="mr-2 size-4" />
+          View Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => logout()}
+          className="h-10 cursor-pointer font-medium text-amber-700"
+        >
+          <LogOut className="mr-2 size-4" />
+          Log Out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

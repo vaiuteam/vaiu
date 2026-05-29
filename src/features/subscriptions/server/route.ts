@@ -19,8 +19,11 @@ import {
 import {
     createRazorpaySubscription,
     cancelRazorpaySubscription,
+    cancelRazorpaySubscriptionSafe,
     verifyRazorpaySignature,
+    getRazorpayErrorMessage,
 } from "@/lib/razorpay";
+import { sendSubscriptionConfirmationEmail } from "@/lib/emails/subscription-confirmation";
 import { getUserSubscription } from "../utils";
 
 const app = new Hono()
@@ -147,13 +150,34 @@ const app = new Hono()
                         `Razorpay plan ID not configured for ${planKey}. Set env var RAZORPAY_PLAN_${planKey}.`
                     );
                     return c.json(
-                        { error: "Subscription plan not configured. Please contact support." },
+                        {
+                            error: `Plan not configured for ${plan}. Run "bun run setup:razorpay-plans" and update your environment.`,
+                        },
                         500
                     );
                 }
 
+                // Cancel current paid subscription before creating a new one (upgrade/downgrade).
+                if (
+                    currentSubscription &&
+                    currentSubscription.plan !== SubscriptionPlan.FREE &&
+                    currentSubscription.razorpaySubscriptionId
+                ) {
+                    await cancelRazorpaySubscriptionSafe(
+                        currentSubscription.razorpaySubscriptionId,
+                        false
+                    );
+                    await databases.updateDocument(
+                        DATABASE_ID,
+                        SUBSCRIPTIONS_ID,
+                        currentSubscription.$id,
+                        {
+                            status: SubscriptionStatus.CANCELLED,
+                        }
+                    );
+                }
+
                 // Razorpay caps total_count at 12 for yearly and 120 for monthly.
-                // Pick the max so subscriptions don't silently terminate.
                 const razorpaySubscription = await createRazorpaySubscription(
                     razorpayPlanId,
                     undefined,
@@ -167,26 +191,6 @@ const app = new Hono()
                     endDate.setMonth(endDate.getMonth() + 1);
                 } else {
                     endDate.setFullYear(endDate.getFullYear() + 1);
-                }
-
-                // Cancel current subscription if exists and is not FREE
-                if (
-                    currentSubscription &&
-                    currentSubscription.plan !== SubscriptionPlan.FREE &&
-                    currentSubscription.razorpaySubscriptionId
-                ) {
-                    await cancelRazorpaySubscription(
-                        currentSubscription.razorpaySubscriptionId,
-                        false
-                    );
-                    await databases.updateDocument(
-                        DATABASE_ID,
-                        SUBSCRIPTIONS_ID,
-                        currentSubscription.$id,
-                        {
-                            status: SubscriptionStatus.CANCELLED,
-                        }
-                    );
                 }
 
                 // Create new subscription record
@@ -224,11 +228,27 @@ const app = new Hono()
                         subscription: newSubscription,
                         razorpaySubscriptionId: razorpaySubscription.id,
                         razorpayKey: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                        prefill: {
+                            name: user.name,
+                            email: user.email,
+                        },
                     },
                 });
             } catch (error) {
                 console.error("Error creating subscription:", error);
-                return c.json({ error: "Failed to create subscription" }, 500);
+                const message = getRazorpayErrorMessage(error);
+                const isInvalidPlan =
+                    message.toLowerCase().includes("invalid") &&
+                    message.toLowerCase().includes("id");
+
+                return c.json(
+                    {
+                        error: isInvalidPlan
+                            ? "Invalid Razorpay plan ID. Run \"bun run setup:razorpay-plans\" and restart the server."
+                            : message || "Failed to create subscription",
+                    },
+                    500
+                );
             }
         }
     )
@@ -282,6 +302,17 @@ const app = new Hono()
                         status: SubscriptionStatus.ACTIVE,
                     }
                 );
+
+                void sendSubscriptionConfirmationEmail({
+                    name: user.name,
+                    email: user.email,
+                    plan: subscription.plan,
+                    billingCycle: subscription.billingCycle,
+                    price: subscription.price ?? null,
+                    currency: subscription.currency,
+                    periodEnd: subscription.currentPeriodEnd,
+                    paymentId: razorpayPaymentId,
+                });
 
                 return c.json({ data: updatedSubscription });
             } catch (error) {

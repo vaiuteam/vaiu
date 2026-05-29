@@ -26,7 +26,7 @@ import { useProjectId } from "@/features/projects/hooks/use-projectId";
 import { useMemo, useCallback } from "react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-// import { CreditCard } from "lucide-react";
+import { CreditCard, Tag } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -268,17 +268,36 @@ export const SidebarComponent = () => {
           </div>
         </SidebarSection>
 
-        {/* Billing Section */}
-        {/* <SidebarGroup className="pt-2">
-          <SidebarGroupContent>
-            <Link href="/billing" className="w-full">
-              <Button variant="outline" className="w-full justify-start" size="sm">
+        {/* Billing & Plans */}
+        <SidebarGroup
+          className={cn(
+            "rounded-2xl bg-sidebar/55 px-1.5 py-2 shadow-none backdrop-blur-xl dark:shadow-sm",
+          )}
+        >
+          <SidebarGroupLabel>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/55">
+              Plans
+            </span>
+          </SidebarGroupLabel>
+          <SidebarGroupContent className="flex flex-col gap-1">
+            <Link href="/pricing">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full justify-start bg-blue-600 font-semibold text-white hover:bg-blue-700"
+              >
+                <Tag className="mr-2 h-4 w-4" />
+                {!isCollapsed && "View Pricing"}
+              </Button>
+            </Link>
+            <Link href="/billing">
+              <Button variant="outline" size="sm" className="w-full justify-start">
                 <CreditCard className="mr-2 h-4 w-4" />
-                Billing & Plans
+                {!isCollapsed && "Billing"}
               </Button>
             </Link>
           </SidebarGroupContent>
-        </SidebarGroup> */}
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
