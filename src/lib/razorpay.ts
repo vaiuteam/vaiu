@@ -74,13 +74,14 @@ export const createRazorpayPlan = async ({
 export const createRazorpaySubscription = async (
     planId: string,
     customerId?: string,
-    totalCount?: number
+    totalCount?: number,
+    quantity: number = 1,
 ) => {
     try {
         const subscriptionData = {
             plan_id: planId,
             total_count: totalCount || 12,
-            quantity: 1,
+            quantity,
             customer_notify: 1 as const,
             ...(customerId && { customer_id: customerId }),
         };
@@ -90,6 +91,50 @@ export const createRazorpaySubscription = async (
     } catch (error) {
         console.error("Error creating Razorpay subscription:", error);
         throw error;
+    }
+};
+
+export const updateRazorpaySubscriptionQuantity = async (
+    subscriptionId: string,
+    quantity: number,
+): Promise<void> => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (razorpay.subscriptions as any).update(subscriptionId, { quantity });
+    } catch (error) {
+        console.warn(`Could not update Razorpay subscription quantity for ${subscriptionId}:`, getRazorpayErrorMessage(error));
+    }
+};
+
+export const createRazorpayOrder = async (amount: number, currency: string = "USD") => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const order = await (razorpay.orders as any).create({
+            amount: amount * 100,
+            currency,
+            payment_capture: 1,
+        });
+        return order as { id: string; amount: number; currency: string };
+    } catch (error) {
+        console.error("Error creating Razorpay order:", error);
+        throw error;
+    }
+};
+
+export const verifyRazorpayOrderSignature = (
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    razorpaySignature: string,
+): boolean => {
+    try {
+        const generated = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+            .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+            .digest("hex");
+        return generated === razorpaySignature;
+    } catch (error) {
+        console.error("Error verifying Razorpay order signature:", error);
+        return false;
     }
 };
 

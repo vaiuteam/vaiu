@@ -10,7 +10,14 @@ import {
   ISSUES_ID,
   WORKSPACE_ID,
   PROJECTS_ID,
+  SUBSCRIPTIONS_ID,
 } from "@/config";
+import {
+  SubscriptionPlan,
+  SubscriptionStatus,
+  PLAN_LIMITS,
+  PLAN_PRICING,
+} from "@/features/subscriptions/types";
 
 import {
   createWorkspaceSchema,
@@ -31,6 +38,7 @@ import { IssueStatus } from "@/features/issues/types";
 import { Project } from "@/features/projects/types";
 import { checkSubscriptionLimit } from "@/features/subscriptions";
 import { checkMemberLimit } from "@/lib/subscription-middleware";
+import { syncWorkspaceSeatCount } from "@/features/subscriptions/server/sync";
 
 const app = new Hono()
   .get("/", sessionMiddleware, async (c) => {
@@ -207,103 +215,144 @@ const app = new Hono()
     zValidator("form", createWorkspaceSchema),
     sessionMiddleware,
     async (c) => {
-      try {
-        const databases = c.get("databases");
-        const storage = c.get("storage");
-        const user = c.get("user");
+      const databases = c.get("databases");
+      const storage = c.get("storage");
+      const user = c.get("user");
 
-        // Check workspace limit
-        const limitCheck = await checkSubscriptionLimit({
-          databases,
-          userId: user.$id,
-          limitType: "workspaces",
-        });
+      // Check workspace limit before doing any writes.
+      const limitCheck = await checkSubscriptionLimit({
+        databases,
+        userId: user.$id,
+        limitType: "workspaces",
+      });
 
-        if (!limitCheck.allowed) {
-          return c.json(
-            {
-              error: "Workspace limit reached",
-              details: {
-                limit: limitCheck.limit,
-                current: limitCheck.current,
-                plan: limitCheck.plan,
-                message: `You have reached the maximum number of workspaces (${limitCheck.limit}) for your ${limitCheck.plan} plan. Please upgrade to create more workspaces.`,
-              },
+      if (!limitCheck.allowed) {
+        return c.json(
+          {
+            error: "Workspace limit reached",
+            details: {
+              limit: limitCheck.limit,
+              current: limitCheck.current,
+              plan: limitCheck.plan,
+              message: `You have reached the maximum number of workspaces (${limitCheck.limit}) for your ${limitCheck.plan} plan. Please upgrade to create more workspaces.`,
             },
-            403
-          );
-        }
+          },
+          403
+        );
+      }
 
-        const { name, image, type } = c.req.valid("form");
+      const { name, image, type } = c.req.valid("form");
 
-        let uploadedImage: string | undefined;
-        if (image instanceof File) {
-          const file = await storage.createFile(
-            IMAGES_BUCKET_ID,
-            ID.unique(),
-            image,
-          );
-          const buffer: ArrayBuffer = await storage.getFilePreview(
-            IMAGES_BUCKET_ID,
-            file.$id,
-          );
-          uploadedImage = `data:image/png;base64,${Buffer.from(buffer).toString(
-            "base64",
-          )}`;
-        }
+      let uploadedImage: string | undefined;
+      if (image instanceof File) {
+        const file = await storage.createFile(
+          IMAGES_BUCKET_ID,
+          ID.unique(),
+          image,
+        );
+        const buffer: ArrayBuffer = await storage.getFilePreview(
+          IMAGES_BUCKET_ID,
+          file.$id,
+        );
+        uploadedImage = `data:image/png;base64,${Buffer.from(buffer).toString(
+          "base64",
+        )}`;
+      }
 
-        const existingWorkspace = await databases.listDocuments(
+      const existingWorkspace = await databases.listDocuments(
+        DATABASE_ID,
+        WORKSPACE_ID,
+        [
+          Query.equal("name", name),
+          Query.equal("userId", user.$id),
+          Query.limit(1),
+          Query.select(["$id"]),
+        ],
+      );
+
+      if (existingWorkspace.total !== 0) {
+        return c.json({ error: "Workspace already exists" }, 400);
+      }
+
+      // Create workspace + admin member atomically — roll back workspace if member creation fails.
+      let workspace: Workspace;
+      try {
+        workspace = await databases.createDocument<Workspace>(
           DATABASE_ID,
           WORKSPACE_ID,
-          [
-            Query.equal("name", name),
-            Query.equal("userId", user.$id),
-            Query.limit(1),
-            Query.select(["$id"]),
-          ],
+          ID.unique(),
+          {
+            name,
+            userId: user.$id,
+            imageUrl: uploadedImage,
+            inviteCode: generateInviteCode(INVITECODE_LENGTH),
+            type: type ?? "personal",
+          },
         );
 
-        if (existingWorkspace.total !== 0) {
-          return c.json({ error: "Workspace already exists" }, 400);
-        } else {
-          const workspace = await databases.createDocument(
-            DATABASE_ID,
-            WORKSPACE_ID,
-            ID.unique(),
-            {
-              name,
-              userId: user.$id,
-              imageUrl: uploadedImage,
-              inviteCode: generateInviteCode(INVITECODE_LENGTH),
-              type: type ?? "personal",
-            },
-          );
-
+        try {
           await databases.createDocument(DATABASE_ID, MEMBERS_ID, ID.unique(), {
             userId: user.$id,
             workspaceId: workspace.$id,
             projectId: [],
             role: MemberRole.ADMIN,
           });
-          return c.json({
-            data: {
-              $id: workspace.$id,
-              $createdAt: workspace.$createdAt,
-              $updatedAt: workspace.$updatedAt,
-              name: workspace.name,
-              imageUrl: workspace.imageUrl,
-              inviteCode: workspace.inviteCode,
-              userId: workspace.userId,
-              type: workspace.type,
-              githubInstallationId: workspace.githubInstallationId,
-              githubAccountLogin: workspace.githubAccountLogin,
-              githubAccountType: workspace.githubAccountType,
-            },
-          });
+        } catch (memberError) {
+          // Member creation failed — delete the orphaned workspace and surface the error.
+          await databases.deleteDocument(DATABASE_ID, WORKSPACE_ID, workspace.$id).catch(() => {});
+          throw memberError;
         }
       } catch (error) {
-        console.log(error);
+        console.error("[workspace-create] error:", error);
+        return c.json({ error: "Failed to create workspace" }, 500);
       }
+
+      // Create FREE trial subscription for this workspace.
+      // Isolated so a transient failure here doesn't break workspace creation —
+      // the subscription route self-heals on first billing page load.
+      try {
+        const freeEnd = new Date();
+        freeEnd.setDate(freeEnd.getDate() + 30);
+        const freeLimits = PLAN_LIMITS[SubscriptionPlan.FREE];
+        const freePricing = PLAN_PRICING[SubscriptionPlan.FREE];
+        await databases.createDocument(DATABASE_ID, SUBSCRIPTIONS_ID, ID.unique(), {
+          userId: user.$id,
+          workspaceId: workspace.$id,
+          plan: SubscriptionPlan.FREE,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: new Date().toISOString(),
+          currentPeriodEnd: freeEnd.toISOString(),
+          cancelAtPeriodEnd: false,
+          billingCycle: "MONTHLY",
+          workspaces: freeLimits.workspaces,
+          projectsPerWorkspace: freeLimits.projectsPerWorkspace,
+          membersPerWorkspace: freeLimits.membersPerWorkspace,
+          roomsPerWorkspace: freeLimits.roomsPerWorkspace,
+          aiCredits: freeLimits.aiCredits,
+          aiCreditsPerUser: freeLimits.aiCreditsPerUser,
+          price: freePricing.monthly,
+          currency: freePricing.currency,
+          durationDays: freeLimits.durationDays,
+        });
+      } catch (subError) {
+        console.error("[workspace-create] subscription creation failed:", subError);
+      }
+
+      return c.json({
+        data: {
+          $id: workspace.$id,
+          $createdAt: workspace.$createdAt,
+          $updatedAt: workspace.$updatedAt,
+          name: workspace.name,
+          imageUrl: workspace.imageUrl,
+          inviteCode: workspace.inviteCode,
+          userId: workspace.userId,
+          type: workspace.type,
+          githubInstallationId: workspace.githubInstallationId,
+          githubAccountLogin: workspace.githubAccountLogin,
+          githubAccountType: workspace.githubAccountType,
+        },
+      });
     },
   )
   .patch(
@@ -455,6 +504,21 @@ const app = new Hono()
     }
 
     await databases.deleteDocument(DATABASE_ID, WORKSPACE_ID, workspaceId);
+
+    // Cascade-delete all subscriptions scoped to this workspace.
+    const workspaceSubs = await databases.listDocuments(
+      DATABASE_ID,
+      SUBSCRIPTIONS_ID,
+      [Query.equal("workspaceId", workspaceId), Query.limit(25)],
+    );
+    if (workspaceSubs.total > 0) {
+      await Promise.all(
+        workspaceSubs.documents.map((sub) =>
+          databases.deleteDocument(DATABASE_ID, SUBSCRIPTIONS_ID, sub.$id),
+        ),
+      );
+    }
+
     return c.json({ data: { $id: workspaceId } });
   })
   .post("/:workspaceId/reset-invite-code", sessionMiddleware, async (c) => {
@@ -936,13 +1000,14 @@ const app = new Hono()
         return c.json({ error: "Already a member of this workspace" }, 400);
       }
 
-      // Create new member document for the workspace
       await databases.createDocument(DATABASE_ID, MEMBERS_ID, ID.unique(), {
         workspaceId,
         projectId: [],
         userId: user.$id,
         role: MemberRole.MEMBER,
       });
+
+      void syncWorkspaceSeatCount(databases, workspaceId);
 
       return c.json({
         data: {

@@ -22,13 +22,19 @@ const PLAN_META: {
   {
     name: SubscriptionPlan.PRO,
     title: "Pro",
-    description: "For individual developers and small teams.",
+    description: "For teams. Scales with your headcount.",
     highlighted: true,
   },
   {
     name: SubscriptionPlan.STANDARD,
     title: "Standard",
-    description: "For growing teams that need more headroom.",
+    description: "More projects, rooms, and AI credits per seat.",
+    highlighted: false,
+  },
+  {
+    name: SubscriptionPlan.EVENT,
+    title: "Event",
+    description: "Flat fee for hackathons.",
     highlighted: false,
   },
   {
@@ -98,11 +104,15 @@ const Pricing = () => {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 py-8 md:grid-cols-2 md:py-12 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 py-8 md:grid-cols-2 md:py-12 lg:grid-cols-5">
           {PLAN_META.map((plan) => {
             const pricing = PLAN_PRICING[plan.name];
-            const price =
-              billingCycle === "MONTHLY" ? pricing.monthly : pricing.yearly;
+            const isEventPlan = plan.name === SubscriptionPlan.EVENT;
+            const price = isEventPlan
+              ? pricing.monthly
+              : billingCycle === "MONTHLY"
+                ? pricing.monthly
+                : pricing.yearly;
             const features = getPlanFeatures(plan.name);
             const isSelected = selectedPlan === plan.name;
 
@@ -133,17 +143,27 @@ const Pricing = () => {
                     </span>
                     {price !== null && price > 0 && (
                       <span className="text-xs text-slate-600 dark:text-slate-400 md:text-sm">
-                        /{billingCycle === "MONTHLY" ? "month" : "year"}
+                        {pricing.perSeat
+                          ? `/ seat / ${billingCycle === "MONTHLY" ? "mo" : "yr"}`
+                          : isEventPlan
+                            ? " flat"
+                            : `/${billingCycle === "MONTHLY" ? "month" : "year"}`}
                       </span>
                     )}
                   </div>
                   {billingCycle === "YEARLY" &&
+                    pricing.perSeat &&
                     price !== null &&
                     price > 0 && (
                       <p className="text-xs text-slate-600 dark:text-slate-400">
-                        ${(price / 12).toFixed(2)} / month, billed yearly
+                        ${(price / 12).toFixed(2)} / seat / mo, billed yearly
                       </p>
                     )}
+                  {isEventPlan && (
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      One-time
+                    </p>
+                  )}
                   <p className="text-xs text-gray-600 dark:text-slate-300 md:text-sm">
                     {plan.description}
                   </p>

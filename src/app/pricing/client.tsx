@@ -3,7 +3,11 @@
 import { SubscriptionFlow } from "@/features/subscriptions/components/subscription-flow";
 import { MarketingPageLayout } from "@/components/marketing-page-layout";
 
-export const PricingClient = () => {
+interface PricingClientProps {
+    workspaceId?: string;
+}
+
+export const PricingClient = ({ workspaceId }: PricingClientProps) => {
     return (
         <MarketingPageLayout>
             <div className="mx-auto w-full max-w-7xl space-y-10">
@@ -20,7 +24,7 @@ export const PricingClient = () => {
                     </p>
                 </section>
 
-                <SubscriptionFlow />
+                <SubscriptionFlow workspaceId={workspaceId} />
             </div>
         </MarketingPageLayout>
     );

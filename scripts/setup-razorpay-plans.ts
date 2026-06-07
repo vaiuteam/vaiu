@@ -12,42 +12,41 @@
 import Razorpay from "razorpay";
 import { PLAN_PRICING, SubscriptionPlan } from "../src/features/subscriptions/types";
 
+// Per-seat plans: the Razorpay plan price is per unit (one seat).
+// Subscriptions are created with `quantity = seatCount`, so Razorpay
+// charges price × quantity automatically each billing cycle.
 const PAID_PLANS = [
     {
         envKey: "RAZORPAY_PLAN_PRO_MONTHLY",
         plan: SubscriptionPlan.PRO,
         billingCycle: "MONTHLY" as const,
         interval: "monthly" as const,
-        title: "Vaiu Pro Monthly",
-        description:
-            "Pro plan for individual developers and small teams. 5 workspaces, 15 members, 1,500 AI credits/month.",
+        title: "Vaiu Pro Monthly (per seat)",
+        description: "Pro plan — $8 per seat per month. 5 workspaces, 10 projects, 100 AI credits/seat/month.",
     },
     {
         envKey: "RAZORPAY_PLAN_PRO_YEARLY",
         plan: SubscriptionPlan.PRO,
         billingCycle: "YEARLY" as const,
         interval: "yearly" as const,
-        title: "Vaiu Pro Yearly",
-        description:
-            "Pro plan billed annually (~17% off). 5 workspaces, 15 members, 1,500 AI credits/month.",
+        title: "Vaiu Pro Yearly (per seat)",
+        description: "Pro plan billed annually — $80 per seat per year (~17% off).",
     },
     {
         envKey: "RAZORPAY_PLAN_STANDARD_MONTHLY",
         plan: SubscriptionPlan.STANDARD,
         billingCycle: "MONTHLY" as const,
         interval: "monthly" as const,
-        title: "Vaiu Standard Monthly",
-        description:
-            "Standard plan for growing teams. 15 workspaces, 50 members, 10,000 AI credits/month.",
+        title: "Vaiu Standard Monthly (per seat)",
+        description: "Standard plan — $14 per seat per month. 15 workspaces, 50 projects, 200 AI credits/seat/month.",
     },
     {
         envKey: "RAZORPAY_PLAN_STANDARD_YEARLY",
         plan: SubscriptionPlan.STANDARD,
         billingCycle: "YEARLY" as const,
         interval: "yearly" as const,
-        title: "Vaiu Standard Yearly",
-        description:
-            "Standard plan billed annually (~17% off). 15 workspaces, 50 members, 10,000 AI credits/month.",
+        title: "Vaiu Standard Yearly (per seat)",
+        description: "Standard plan billed annually — $140 per seat per year (~17% off).",
     },
 ];
 

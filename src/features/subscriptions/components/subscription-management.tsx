@@ -11,9 +11,10 @@ import { useCancelSubscription } from "../api/use-cancel-subscription";
 
 interface SubscriptionManagementProps {
     subscription: Subscription;
+    workspaceId?: string;
 }
 
-export const SubscriptionManagement = ({ subscription }: SubscriptionManagementProps) => {
+export const SubscriptionManagement = ({ subscription, workspaceId }: SubscriptionManagementProps) => {
     const [ConfirmDialog, confirm] = useConfirm(
         "Cancel Subscription",
         "Are you sure you want to cancel your subscription? You will continue to have access until the end of your billing period.",
@@ -26,11 +27,13 @@ export const SubscriptionManagement = ({ subscription }: SubscriptionManagementP
         const ok = await confirm();
         if (!ok) return;
 
-        cancelSubscription({ cancelAtPeriodEnd: true });
+        cancelSubscription({ cancelAtPeriodEnd: true, workspaceId });
     };
 
     const isActive = subscription.status === SubscriptionStatus.ACTIVE;
     const isFree = subscription.plan === SubscriptionPlan.FREE;
+    const isEvent = subscription.plan === SubscriptionPlan.EVENT;
+    const isOneTime = subscription.billingCycle === "ONE_TIME";
     const willCancel = subscription.cancelAtPeriodEnd;
 
     return (
@@ -54,21 +57,35 @@ export const SubscriptionManagement = ({ subscription }: SubscriptionManagementP
                             <span className="text-sm font-medium">Plan</span>
                             <span className="text-sm">{subscription.plan}</span>
                         </div>
+                        {!isFree && !isOneTime && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Billing Cycle</span>
+                                <span className="text-sm capitalize">
+                                    {subscription.billingCycle.toLowerCase()}
+                                </span>
+                            </div>
+                        )}
+                        {isOneTime && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Billing</span>
+                                <span className="text-sm">One-time payment</span>
+                            </div>
+                        )}
+                        {subscription.seatCount && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Seats</span>
+                                <span className="text-sm">{subscription.seatCount}</span>
+                            </div>
+                        )}
                         {!isFree && (
-                            <>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Billing Cycle</span>
-                                    <span className="text-sm capitalize">
-                                        {subscription.billingCycle.toLowerCase()}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Current Period Ends</span>
-                                    <span className="text-sm">
-                                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            </>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">
+                                    {isEvent ? "Event Expires" : "Current Period Ends"}
+                                </span>
+                                <span className="text-sm">
+                                    {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                                </span>
+                            </div>
                         )}
                         {isFree && (
                             <div className="flex items-center justify-between">
@@ -89,7 +106,7 @@ export const SubscriptionManagement = ({ subscription }: SubscriptionManagementP
                         </Alert>
                     )}
                 </CardContent>
-                {!isFree && (
+                {!isFree && !isOneTime && (
                     <CardFooter>
                         <Button
                             variant="destructive"

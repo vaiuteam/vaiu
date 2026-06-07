@@ -67,16 +67,17 @@ const app = new Hono()
         }, 400);
       }
 
-      // Check and consume AI credits
-      const creditResult = await consumeAICredits({
+      // Check credits before calling the AI API (no write yet).
+      const creditCheck = await consumeAICredits({
         databases,
         userId: user.$id,
         workspaceId,
         creditsToConsume: AIFeatureCost.SUMMARY,
+        checkOnly: true,
       });
 
-      if (!creditResult.success) {
-        return c.json({ error: creditResult.message }, 402);
+      if (!creditCheck.success) {
+        return c.json({ error: creditCheck.message }, 402);
       }
 
       try {
@@ -161,6 +162,14 @@ const app = new Hono()
         }
 
         const summary = await generateAISummary(summaryInput);
+
+        // Consume credits only after the AI call succeeded.
+        await consumeAICredits({
+          databases,
+          userId: user.$id,
+          workspaceId,
+          creditsToConsume: AIFeatureCost.SUMMARY,
+        });
 
         return c.json({
           data: summary,

@@ -9,11 +9,25 @@ import { PricingCards } from "./pricing-cards";
 import { SubscriptionPlan } from "../types";
 import { useCreateSubscription } from "../api/use-create-subscription";
 import { useVerifyPayment } from "../api/use-verify-payment";
-import { useGetCurrentSubscription } from "../api/use-get-current-subscription";
+import { useGetWorkspaceSubscription } from "../api/use-get-workspace-subscription";
+import { useGetWorkspaces } from "@/features/workspaces/api/use-get-workspaces";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
-interface RazorpayResponse {
+interface RazorpaySubscriptionResponse {
     razorpay_payment_id: string;
     razorpay_subscription_id: string;
+    razorpay_signature: string;
+}
+
+interface RazorpayOrderResponse {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
     razorpay_signature: string;
 }
 
@@ -52,9 +66,16 @@ function loadRazorpayScript(): Promise<void> {
     });
 }
 
-export const SubscriptionFlow = () => {
+interface SubscriptionFlowProps {
+    workspaceId?: string;
+}
+
+export const SubscriptionFlow = ({ workspaceId: initialWorkspaceId }: SubscriptionFlowProps) => {
     const router = useRouter();
-    const { data: subscription, isLoading } = useGetCurrentSubscription();
+    const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | undefined>(initialWorkspaceId);
+
+    const { data: workspacesData, isLoading: loadingWorkspaces } = useGetWorkspaces();
+    const { data: subscription, isLoading: loadingSubscription } = useGetWorkspaceSubscription(selectedWorkspaceId);
     const { mutate: createSubscription, isPending: isCreating } = useCreateSubscription();
     const { mutate: verifyPayment, isPending: isVerifying } = useVerifyPayment();
     const [razorpayReady, setRazorpayReady] = useState(false);
@@ -65,7 +86,7 @@ export const SubscriptionFlow = () => {
             .catch(() => toast.error("Failed to load payment gateway. Please refresh and try again."));
     }, []);
 
-    const openRazorpayCheckout = useCallback(
+    const openSubscriptionCheckout = useCallback(
         (
             plan: SubscriptionPlan,
             billingCycle: "MONTHLY" | "YEARLY",
@@ -83,7 +104,7 @@ export const SubscriptionFlow = () => {
                 subscription_id: razorpaySubscriptionId,
                 name: "Vaiu",
                 description: `${plan} ${billingCycle.toLowerCase()} subscription`,
-                handler: (response: RazorpayResponse) => {
+                handler: (response: RazorpaySubscriptionResponse) => {
                     verifyPayment(
                         {
                             razorpayPaymentId: response.razorpay_payment_id,
@@ -98,10 +119,7 @@ export const SubscriptionFlow = () => {
                         },
                     );
                 },
-                prefill: {
-                    name: prefill?.name ?? "",
-                    email: prefill?.email ?? "",
-                },
+                prefill: { name: prefill?.name ?? "", email: prefill?.email ?? "" },
                 theme: { color: "#2563eb" },
             };
 
@@ -114,14 +132,65 @@ export const SubscriptionFlow = () => {
         [router, verifyPayment],
     );
 
-    const handleSelectPlan = (plan: SubscriptionPlan, billingCycle: "MONTHLY" | "YEARLY") => {
+    const openOrderCheckout = useCallback(
+        (
+            razorpayKey: string,
+            razorpayOrderId: string,
+            amount: number,
+            currency: string,
+            prefill?: { name?: string; email?: string },
+        ) => {
+            if (!window.Razorpay) {
+                toast.error("Payment gateway is not ready yet. Please try again.");
+                return;
+            }
+
+            const options = {
+                key: razorpayKey,
+                order_id: razorpayOrderId,
+                amount,
+                currency,
+                name: "Vaiu",
+                description: "Vaiu Event Plan",
+                handler: (response: RazorpayOrderResponse) => {
+                    verifyPayment(
+                        {
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpaySignature: response.razorpay_signature,
+                        },
+                        {
+                            onSuccess: () => {
+                                toast.success("Payment successful — Event plan is now active!");
+                                router.push("/billing");
+                            },
+                        },
+                    );
+                },
+                prefill: { name: prefill?.name ?? "", email: prefill?.email ?? "" },
+                theme: { color: "#2563eb" },
+            };
+
+            const razorpay = new window.Razorpay(options);
+            razorpay.on("payment.failed", (response) => {
+                toast.error(response.error?.description ?? "Payment failed. Please try again.");
+            });
+            razorpay.open();
+        },
+        [router, verifyPayment],
+    );
+
+    const handleSelectPlan = (
+        plan: SubscriptionPlan,
+        billingCycle: "MONTHLY" | "YEARLY" | "ONE_TIME",
+    ) => {
         if (!razorpayReady) {
             toast.error("Payment gateway is still loading. Please wait a moment.");
             return;
         }
 
         createSubscription(
-            { plan, billingCycle },
+            { plan, billingCycle, workspaceId: selectedWorkspaceId },
             {
                 onSuccess: (response) => {
                     if (!("data" in response)) {
@@ -129,34 +198,75 @@ export const SubscriptionFlow = () => {
                         return;
                     }
 
-                    const { razorpaySubscriptionId, razorpayKey, prefill } = response.data;
+                    const { razorpayKey, prefill } = response.data;
 
-                    if (!razorpayKey || !razorpaySubscriptionId) {
-                        toast.error(
-                            "Payment is not configured. Check Razorpay keys and plan IDs in your environment.",
+                    if (!razorpayKey) {
+                        toast.error("Payment is not configured. Check Razorpay keys in your environment.");
+                        return;
+                    }
+
+                    if ("razorpayOrderId" in response.data && response.data.razorpayOrderId) {
+                        openOrderCheckout(
+                            razorpayKey,
+                            response.data.razorpayOrderId,
+                            response.data.amount,
+                            response.data.currency,
+                            prefill,
                         );
                         return;
                     }
 
-                    openRazorpayCheckout(
-                        plan,
-                        billingCycle,
-                        razorpayKey,
-                        razorpaySubscriptionId,
-                        prefill,
-                    );
+                    if ("razorpaySubscriptionId" in response.data && response.data.razorpaySubscriptionId) {
+                        openSubscriptionCheckout(
+                            plan,
+                            billingCycle as "MONTHLY" | "YEARLY",
+                            razorpayKey,
+                            response.data.razorpaySubscriptionId,
+                            prefill,
+                        );
+                        return;
+                    }
+
+                    toast.error("Missing payment details. Please contact support.");
                 },
             },
         );
     };
+
+    const workspaces = workspacesData?.documents ?? [];
+    const isLoading = loadingWorkspaces || (!!selectedWorkspaceId && loadingSubscription);
 
     if (isLoading) return <PricingFlowSkeleton />;
 
     const isProcessing = isCreating || isVerifying;
 
     return (
-        <>
-            <PricingCards currentPlan={subscription?.plan} onSelectPlan={handleSelectPlan} />
+        <div className="space-y-8">
+            <div className="mx-auto max-w-xs space-y-2">
+                <p className="text-center text-sm font-medium text-muted-foreground">
+                    Subscribing for workspace
+                </p>
+                <Select
+                    value={selectedWorkspaceId ?? ""}
+                    onValueChange={setSelectedWorkspaceId}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a workspace" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {workspaces.map((ws: { $id: string; name: string }) => (
+                            <SelectItem key={ws.$id} value={ws.$id}>
+                                {ws.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <PricingCards
+                currentPlan={subscription?.plan}
+                onSelectPlan={handleSelectPlan}
+            />
 
             {isProcessing && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -168,6 +278,6 @@ export const SubscriptionFlow = () => {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };

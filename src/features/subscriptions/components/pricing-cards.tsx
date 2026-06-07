@@ -19,14 +19,15 @@ import { getPlanFeatures } from "../utils";
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
     [SubscriptionPlan.FREE]: 0,
-    [SubscriptionPlan.PRO]: 1,
-    [SubscriptionPlan.STANDARD]: 2,
-    [SubscriptionPlan.ENTERPRISE]: 3,
+    [SubscriptionPlan.EVENT]: 1,
+    [SubscriptionPlan.PRO]: 2,
+    [SubscriptionPlan.STANDARD]: 3,
+    [SubscriptionPlan.ENTERPRISE]: 4,
 };
 
 interface PricingCardsProps {
     currentPlan?: SubscriptionPlan;
-    onSelectPlan: (plan: SubscriptionPlan, billingCycle: "MONTHLY" | "YEARLY") => void;
+    onSelectPlan: (plan: SubscriptionPlan, billingCycle: "MONTHLY" | "YEARLY" | "ONE_TIME") => void;
 }
 
 export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) => {
@@ -36,25 +37,31 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
         {
             name: SubscriptionPlan.FREE,
             title: "Free",
-            description: "Perfect for trying out Vaiu",
+            description: "Try Vaiu for 30 days — no card required.",
             popular: false,
         },
         {
             name: SubscriptionPlan.PRO,
             title: "Pro",
-            description: "For professional developers",
+            description: "For teams. Scales with your headcount.",
             popular: true,
         },
         {
             name: SubscriptionPlan.STANDARD,
             title: "Standard",
-            description: "For growing teams",
+            description: "More projects, rooms, and AI credits per seat.",
+            popular: false,
+        },
+        {
+            name: SubscriptionPlan.EVENT,
+            title: "Event",
+            description: "Flat fee for hackathons & sprints. Up to 150 members, 14 days.",
             popular: false,
         },
         {
             name: SubscriptionPlan.ENTERPRISE,
             title: "Enterprise",
-            description: "For large organizations",
+            description: "Custom pricing for large organizations.",
             popular: false,
         },
     ];
@@ -63,11 +70,9 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
         if (isCurrentPlan) return "Current Plan";
         if (plan === SubscriptionPlan.FREE) return "Included on signup";
         if (plan === SubscriptionPlan.ENTERPRISE) return "Contact Sales";
-
         if (currentPlan && PLAN_RANK[plan] > PLAN_RANK[currentPlan]) {
             return `Upgrade to ${plan.charAt(0) + plan.slice(1).toLowerCase()}`;
         }
-
         return "Get Started";
     };
 
@@ -92,15 +97,21 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                 </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
                 {plans.map((plan) => {
                     const pricing = PLAN_PRICING[plan.name];
                     const features = getPlanFeatures(plan.name);
                     const isCurrentPlan = currentPlan === plan.name;
                     const isUpgrade =
                         currentPlan !== undefined && PLAN_RANK[plan.name] > PLAN_RANK[currentPlan];
-                    const price =
-                        billingCycle === "MONTHLY" ? pricing.monthly : pricing.yearly;
+                    const isPerSeat = pricing.perSeat;
+                    const isEventPlan = plan.name === SubscriptionPlan.EVENT;
+
+                    const basePrice = isEventPlan
+                        ? pricing.monthly
+                        : billingCycle === "MONTHLY"
+                          ? pricing.monthly
+                          : pricing.yearly;
 
                     return (
                         <Card
@@ -130,28 +141,36 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                             </CardHeader>
                             <CardContent className="flex flex-1 flex-col space-y-4">
                                 <div className="space-y-1">
-                                    <div className="text-3xl font-bold tracking-tight">
-                                        {price === null ? (
-                                            "Custom"
-                                        ) : price === 0 ? (
-                                            "Free"
+                                    <div className="flex items-baseline gap-1 text-3xl font-bold tracking-tight">
+                                        {basePrice === null ? (
+                                            <span>Custom</span>
+                                        ) : basePrice === 0 ? (
+                                            <span>Free</span>
                                         ) : (
                                             <>
-                                                ${price}
+                                                <span>${basePrice}</span>
                                                 <span className="text-sm font-normal text-muted-foreground">
-                                                    /{billingCycle === "MONTHLY" ? "mo" : "yr"}
+                                                    {isPerSeat
+                                                        ? `/ seat / ${billingCycle === "MONTHLY" ? "mo" : "yr"}`
+                                                        : isEventPlan
+                                                          ? " flat"
+                                                          : `/ ${billingCycle === "MONTHLY" ? "mo" : "yr"}`}
                                                 </span>
                                             </>
                                         )}
                                     </div>
-                                    {billingCycle === "YEARLY" &&
-                                        plan.name !== SubscriptionPlan.FREE &&
-                                        price !== null &&
-                                        price > 0 && (
-                                            <p className="text-sm text-muted-foreground">
-                                                ${(price / 12).toFixed(2)}/mo billed yearly
-                                            </p>
-                                        )}
+
+                                    {billingCycle === "YEARLY" && isPerSeat && basePrice !== null && (
+                                        <p className="text-sm text-muted-foreground">
+                                            ${(basePrice / 12).toFixed(2)} / seat / mo billed yearly
+                                        </p>
+                                    )}
+
+                                    {isEventPlan && (
+                                        <p className="text-xs text-muted-foreground">
+                                            One-time · 14 days · up to 150 members
+                                        </p>
+                                    )}
                                 </div>
 
                                 <ul className="flex-1 space-y-2.5">
@@ -185,6 +204,10 @@ export const PricingCards = ({ currentPlan, onSelectPlan }: PricingCardsProps) =
                                                 description:
                                                     "Please reach out to our sales team for Enterprise pricing.",
                                             });
+                                            return;
+                                        }
+                                        if (isEventPlan) {
+                                            onSelectPlan(plan.name, "ONE_TIME");
                                             return;
                                         }
                                         onSelectPlan(plan.name, billingCycle);

@@ -447,16 +447,17 @@ const app = new Hono()
           );
         }
 
-        // Check and consume AI credits
-        const creditResult = await consumeAICredits({
+        // Check credits before calling the AI API (no write yet).
+        const creditCheck = await consumeAICredits({
           databases,
           userId: user.$id,
           workspaceId: project.workspaceId,
           creditsToConsume: AIFeatureCost.CODE_REVIEW,
+          checkOnly: true,
         });
 
-        if (!creditResult.success) {
-          return c.json({ error: creditResult.message }, 402);
+        if (!creditCheck.success) {
+          return c.json({ error: creditCheck.message }, 402);
         }
 
         // Start AI review analysis
@@ -465,6 +466,14 @@ const app = new Hono()
           prNumber: parseInt(prNumber),
           project,
           githubToken,
+        });
+
+        // Consume credits only after the AI call succeeded.
+        await consumeAICredits({
+          databases,
+          userId: user.$id,
+          workspaceId: project.workspaceId,
+          creditsToConsume: AIFeatureCost.CODE_REVIEW,
         });
 
         return c.json({ success: true, review: aiReview });
@@ -539,16 +548,17 @@ const app = new Hono()
           }
         }
 
-        // Check and consume AI credits
-        const creditResult = await consumeAICredits({
+        // Check credits before calling the AI API (no write yet).
+        const creditCheck = await consumeAICredits({
           databases,
           userId: user.$id,
           workspaceId: project.workspaceId,
           creditsToConsume: AIFeatureCost.TEST_GENERATION,
+          checkOnly: true,
         });
 
-        if (!creditResult.success) {
-          return c.json({ error: creditResult.message }, 402);
+        if (!creditCheck.success) {
+          return c.json({ error: creditCheck.message }, 402);
         }
 
         // Generate AI test cases
@@ -557,6 +567,14 @@ const app = new Hono()
           prNumber: parseInt(prNumber),
           project,
           githubToken,
+        });
+
+        // Consume credits only after the AI call succeeded.
+        await consumeAICredits({
+          databases,
+          userId: user.$id,
+          workspaceId: project.workspaceId,
+          creditsToConsume: AIFeatureCost.TEST_GENERATION,
         });
 
         return c.json({ success: true, tests: testGeneration });

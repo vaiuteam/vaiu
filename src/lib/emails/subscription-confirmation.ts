@@ -21,14 +21,14 @@ function subscriptionConfirmationHtml({
 }: {
     name: string;
     plan: SubscriptionPlan;
-    billingCycle: "MONTHLY" | "YEARLY";
+    billingCycle: "MONTHLY" | "YEARLY" | "ONE_TIME";
     price: number | null;
     currency: string;
     periodEnd: string;
     paymentId?: string;
 }): string {
     const features = getPlanFeatures(plan);
-    const billingLabel = billingCycle === "MONTHLY" ? "Monthly" : "Yearly";
+    const billingLabel = billingCycle === "MONTHLY" ? "Monthly" : billingCycle === "YEARLY" ? "Yearly" : "One-time";
     const periodEndDate = new Date(periodEnd).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -90,7 +90,7 @@ export async function sendSubscriptionConfirmationEmail({
     name: string;
     email: string;
     plan: SubscriptionPlan;
-    billingCycle: "MONTHLY" | "YEARLY";
+    billingCycle: "MONTHLY" | "YEARLY" | "ONE_TIME";
     price: number | null;
     currency: string;
     periodEnd: string;
