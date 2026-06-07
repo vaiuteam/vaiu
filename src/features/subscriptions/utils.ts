@@ -1,7 +1,6 @@
 import { DATABASE_ID, SUBSCRIPTIONS_ID, USER_USAGE_ID, WORKSPACE_ID, PROJECTS_ID, ROOMS_ID } from "@/config";
 import { ID, Query, type Databases } from "node-appwrite";
 import { Subscription, UserUsage, SubscriptionPlan, SubscriptionStatus, PLAN_LIMITS, PLAN_PRICING, PlanLimits } from "./types";
-import { MemberRole } from "@/features/members/types";
 import { MEMBERS_ID } from "@/config";
 
 interface GetSubscriptionProps {
@@ -94,11 +93,17 @@ export const getWorkspaceSubscription = async ({
             ]
         );
 
-        const sub = subs.documents.find(
+        const activeSubs = subs.documents.filter(
             (s) => s.status === SubscriptionStatus.ACTIVE && new Date(s.currentPeriodEnd) > now
         );
 
-        if (sub) {
+        if (activeSubs.length > 0) {
+            // Prefer paid plans over FREE when duplicate ACTIVE rows exist.
+            const sub = activeSubs.sort((a, b) => {
+                if (a.plan === SubscriptionPlan.FREE && b.plan !== SubscriptionPlan.FREE) return 1;
+                if (b.plan === SubscriptionPlan.FREE && a.plan !== SubscriptionPlan.FREE) return -1;
+                return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+            })[0];
             return { plan: sub.plan, subscription: sub };
         }
 

@@ -311,29 +311,37 @@ const app = new Hono()
       // Isolated so a transient failure here doesn't break workspace creation —
       // the subscription route self-heals on first billing page load.
       try {
-        const freeEnd = new Date();
-        freeEnd.setDate(freeEnd.getDate() + 30);
-        const freeLimits = PLAN_LIMITS[SubscriptionPlan.FREE];
-        const freePricing = PLAN_PRICING[SubscriptionPlan.FREE];
-        await databases.createDocument(DATABASE_ID, SUBSCRIPTIONS_ID, ID.unique(), {
-          userId: user.$id,
-          workspaceId: workspace.$id,
-          plan: SubscriptionPlan.FREE,
-          status: SubscriptionStatus.ACTIVE,
-          currentPeriodStart: new Date().toISOString(),
-          currentPeriodEnd: freeEnd.toISOString(),
-          cancelAtPeriodEnd: false,
-          billingCycle: "MONTHLY",
-          workspaces: freeLimits.workspaces,
-          projectsPerWorkspace: freeLimits.projectsPerWorkspace,
-          membersPerWorkspace: freeLimits.membersPerWorkspace,
-          roomsPerWorkspace: freeLimits.roomsPerWorkspace,
-          aiCredits: freeLimits.aiCredits,
-          aiCreditsPerUser: freeLimits.aiCreditsPerUser,
-          price: freePricing.monthly,
-          currency: freePricing.currency,
-          durationDays: freeLimits.durationDays,
-        });
+        const existingSubs = await databases.listDocuments(
+          DATABASE_ID,
+          SUBSCRIPTIONS_ID,
+          [Query.equal("workspaceId", workspace.$id), Query.limit(1)],
+        );
+
+        if (existingSubs.total === 0) {
+          const freeEnd = new Date();
+          freeEnd.setDate(freeEnd.getDate() + 30);
+          const freeLimits = PLAN_LIMITS[SubscriptionPlan.FREE];
+          const freePricing = PLAN_PRICING[SubscriptionPlan.FREE];
+          await databases.createDocument(DATABASE_ID, SUBSCRIPTIONS_ID, ID.unique(), {
+            userId: user.$id,
+            workspaceId: workspace.$id,
+            plan: SubscriptionPlan.FREE,
+            status: SubscriptionStatus.ACTIVE,
+            currentPeriodStart: new Date().toISOString(),
+            currentPeriodEnd: freeEnd.toISOString(),
+            cancelAtPeriodEnd: false,
+            billingCycle: "MONTHLY",
+            workspaces: freeLimits.workspaces,
+            projectsPerWorkspace: freeLimits.projectsPerWorkspace,
+            membersPerWorkspace: freeLimits.membersPerWorkspace,
+            roomsPerWorkspace: freeLimits.roomsPerWorkspace,
+            aiCredits: freeLimits.aiCredits,
+            aiCreditsPerUser: freeLimits.aiCreditsPerUser,
+            price: freePricing.monthly,
+            currency: freePricing.currency,
+            durationDays: freeLimits.durationDays,
+          });
+        }
       } catch (subError) {
         console.error("[workspace-create] subscription creation failed:", subError);
       }

@@ -27,6 +27,7 @@ import {
 } from "@/lib/razorpay";
 import { sendSubscriptionConfirmationEmail } from "@/lib/emails/subscription-confirmation";
 import { getUserSubscription, getWorkspaceSubscription } from "../utils";
+import { listWorkspaceSubscriptions, supersedeWorkspaceSubscriptions } from "./sync";
 
 const app = new Hono()
     // Get current user's subscription
@@ -66,7 +67,7 @@ const app = new Hono()
         async (c) => {
             const databases = c.get("databases");
             const user = c.get("user");
-            const { plan, billingCycle, seatCount, workspaceId } = c.req.valid("json");
+            const { plan, billingCycle, workspaceId } = c.req.valid("json");
 
             try {
 
@@ -92,6 +93,11 @@ const app = new Hono()
                     await databases.updateDocument(DATABASE_ID, SUBSCRIPTIONS_ID, currentSubscription.$id, {
                         status: SubscriptionStatus.CANCELLED,
                     });
+                }
+
+                // End workspace trial / abandoned checkouts before creating a replacement.
+                if (workspaceId) {
+                    await supersedeWorkspaceSubscriptions(databases, workspaceId);
                 }
 
                 const planLimits = PLAN_LIMITS[plan];
@@ -281,6 +287,10 @@ const app = new Hono()
 
                 const subscription = subscriptions.documents[0];
 
+                if (subscription.status === SubscriptionStatus.ACTIVE) {
+                    return c.json({ data: subscription });
+                }
+
                 // Update subscription status to ACTIVE
                 const updatedSubscription = await databases.updateDocument(
                     DATABASE_ID,
@@ -290,6 +300,14 @@ const app = new Hono()
                         status: SubscriptionStatus.ACTIVE,
                     }
                 );
+
+                if (subscription.workspaceId) {
+                    await supersedeWorkspaceSubscriptions(
+                        databases,
+                        subscription.workspaceId,
+                        subscription.$id,
+                    );
+                }
 
                 void sendSubscriptionConfirmationEmail({
                     name: user.name,
@@ -421,7 +439,12 @@ const app = new Hono()
                 return c.json({ data: result.subscription });
             }
 
-            // No active subscription found — create a FREE one for this workspace.
+            const existingSubs = await listWorkspaceSubscriptions(databases, workspaceId);
+            if (existingSubs.length > 0) {
+                return c.json({ data: existingSubs[0] });
+            }
+
+            // No subscription found — create a FREE one for this workspace.
             const workspace = await databases.getDocument(DATABASE_ID, WORKSPACE_ID, workspaceId);
             const freeEnd = new Date();
             freeEnd.setDate(freeEnd.getDate() + 30);

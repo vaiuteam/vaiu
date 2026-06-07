@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { SubscriptionManagement } from "@/features/subscriptions/components/subscription-management";
 import { UsageStats } from "@/features/subscriptions/components/usage-stats";
 import { useGetWorkspaceSubscription } from "@/features/subscriptions/api/use-get-workspace-subscription";
@@ -22,7 +22,10 @@ import { MarketingPageLayout } from "@/components/marketing-page-layout";
 export default function BillingPage() {
     const router = useRouter();
     const { data: workspacesData, isLoading: loadingWorkspaces } = useGetWorkspaces();
-    const workspaces = workspacesData?.documents ?? [];
+    const workspaces = useMemo(
+        () => workspacesData?.documents ?? [],
+        [workspacesData?.documents],
+    );
 
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | undefined>(undefined);
 
