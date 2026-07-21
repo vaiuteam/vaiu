@@ -6,7 +6,7 @@ type SourceVariant = "vaiu" | "github";
 type WorkspaceVariant = "personal" | "organization";
 
 const baseClasses =
-  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide";
+  "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide";
 
 const sourceVariantClasses: Record<SourceVariant, string> = {
   vaiu:

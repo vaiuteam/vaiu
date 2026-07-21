@@ -4,6 +4,7 @@ import { Octokit } from "octokit";
 import { createAdminClient } from "@/lib/appwrite";
 import { AUTH_COOKIE } from "@/features/auth/constants";
 import { DATABASE_ID, USER_PROFILES_ID } from "@/config";
+import { sendWelcomeEmail } from "@/lib/emails/welcome";
 import { ID, Query } from "node-appwrite";
 
 /**
@@ -153,6 +154,11 @@ export async function GET(request: NextRequest) {
                     userId,
                     profileData
                 );
+
+                void sendWelcomeEmail({
+                    name: githubUser.name || githubUser.login,
+                    email: userEmail,
+                });
             } else {
                 await databases.updateDocument(
                     DATABASE_ID,

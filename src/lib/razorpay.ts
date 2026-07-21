@@ -11,19 +11,57 @@ export const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-export const createRazorpayPlan = async (
-    amount: number,
-    currency: string,
-    interval: "monthly" | "yearly"
-) => {
+interface RazorpayApiError {
+    statusCode?: number;
+    error?: {
+        code?: string;
+        description?: string;
+        reason?: string;
+    };
+}
+
+export function getRazorpayErrorMessage(error: unknown): string {
+    if (error && typeof error === "object") {
+        const razorpayError = error as RazorpayApiError;
+        if (razorpayError.error?.description) {
+            return razorpayError.error.description;
+        }
+        if (razorpayError.error?.reason) {
+            return razorpayError.error.reason;
+        }
+    }
+
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    return "Payment provider error";
+}
+
+export interface CreateRazorpayPlanOptions {
+    name: string;
+    description?: string;
+    amount: number;
+    currency: string;
+    interval: "monthly" | "yearly";
+}
+
+export const createRazorpayPlan = async ({
+    name,
+    description,
+    amount,
+    currency,
+    interval,
+}: CreateRazorpayPlanOptions) => {
     try {
         const plan = await razorpay.plans.create({
             period: interval === "monthly" ? "monthly" : "yearly",
             interval: 1,
             item: {
-                name: `Vaiu ${interval === "monthly" ? "Monthly" : "Yearly"} Subscription`,
-                amount: amount * 100, // Amount in paise
-                currency: currency,
+                name,
+                description,
+                amount: amount * 100, // smallest currency unit (cents for USD)
+                currency,
             },
         });
         return plan;
@@ -36,13 +74,14 @@ export const createRazorpayPlan = async (
 export const createRazorpaySubscription = async (
     planId: string,
     customerId?: string,
-    totalCount?: number
+    totalCount?: number,
+    quantity: number = 1,
 ) => {
     try {
         const subscriptionData = {
             plan_id: planId,
             total_count: totalCount || 12,
-            quantity: 1,
+            quantity,
             customer_notify: 1 as const,
             ...(customerId && { customer_id: customerId }),
         };
@@ -52,6 +91,50 @@ export const createRazorpaySubscription = async (
     } catch (error) {
         console.error("Error creating Razorpay subscription:", error);
         throw error;
+    }
+};
+
+export const updateRazorpaySubscriptionQuantity = async (
+    subscriptionId: string,
+    quantity: number,
+): Promise<void> => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (razorpay.subscriptions as any).update(subscriptionId, { quantity });
+    } catch (error) {
+        console.warn(`Could not update Razorpay subscription quantity for ${subscriptionId}:`, getRazorpayErrorMessage(error));
+    }
+};
+
+export const createRazorpayOrder = async (amount: number, currency: string = "USD") => {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const order = await (razorpay.orders as any).create({
+            amount: amount * 100,
+            currency,
+            payment_capture: 1,
+        });
+        return order as { id: string; amount: number; currency: string };
+    } catch (error) {
+        console.error("Error creating Razorpay order:", error);
+        throw error;
+    }
+};
+
+export const verifyRazorpayOrderSignature = (
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    razorpaySignature: string,
+): boolean => {
+    try {
+        const generated = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+            .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+            .digest("hex");
+        return generated === razorpaySignature;
+    } catch (error) {
+        console.error("Error verifying Razorpay order signature:", error);
+        return false;
     }
 };
 
@@ -67,6 +150,22 @@ export const cancelRazorpaySubscription = async (
         throw error;
     }
 };
+
+export async function cancelRazorpaySubscriptionSafe(
+    subscriptionId: string,
+    cancelAtCycleEnd: boolean = true
+): Promise<boolean> {
+    try {
+        await cancelRazorpaySubscription(subscriptionId, cancelAtCycleEnd);
+        return true;
+    } catch (error) {
+        console.warn(
+            `Could not cancel Razorpay subscription ${subscriptionId}:`,
+            getRazorpayErrorMessage(error)
+        );
+        return false;
+    }
+}
 
 export const fetchRazorpaySubscription = async (subscriptionId: string) => {
     try {

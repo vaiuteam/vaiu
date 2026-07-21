@@ -18,10 +18,16 @@ import {
 } from "../types";
 import {
     createRazorpaySubscription,
+    createRazorpayOrder,
     cancelRazorpaySubscription,
+    cancelRazorpaySubscriptionSafe,
     verifyRazorpaySignature,
+    verifyRazorpayOrderSignature,
+    getRazorpayErrorMessage,
 } from "@/lib/razorpay";
-import { getUserSubscription } from "../utils";
+import { sendSubscriptionConfirmationEmail } from "@/lib/emails/subscription-confirmation";
+import { getUserSubscription, getWorkspaceSubscription } from "../utils";
+import { listWorkspaceSubscriptions, supersedeWorkspaceSubscriptions } from "./sync";
 
 const app = new Hono()
     // Get current user's subscription
@@ -35,53 +41,7 @@ const app = new Hono()
                 userId: user.$id,
             });
 
-            // If no subscription exists, create a default FREE subscription
-            if (!subscription) {
-                const freeEndDate = new Date();
-                freeEndDate.setDate(freeEndDate.getDate() + 30);
-
-                const freeLimits = PLAN_LIMITS[SubscriptionPlan.FREE];
-                const freePricing = PLAN_PRICING[SubscriptionPlan.FREE];
-
-                const newSubscription = await databases.createDocument(
-                    DATABASE_ID,
-                    SUBSCRIPTIONS_ID,
-                    ID.unique(),
-                    {
-                        userId: user.$id,
-                        plan: SubscriptionPlan.FREE,
-                        status: SubscriptionStatus.ACTIVE,
-                        currentPeriodStart: new Date().toISOString(),
-                        currentPeriodEnd: freeEndDate.toISOString(),
-                        cancelAtPeriodEnd: false,
-                        billingCycle: "MONTHLY",
-                        workspaces: freeLimits.workspaces,
-                        projectsPerWorkspace: freeLimits.projectsPerWorkspace,
-                        membersPerWorkspace: freeLimits.membersPerWorkspace,
-                        roomsPerWorkspace: freeLimits.roomsPerWorkspace,
-                        aiCredits: freeLimits.aiCredits,
-                        aiCreditsPerUser: freeLimits.aiCreditsPerUser,
-                        price: freePricing.monthly, // FREE is 0 either way
-                        currency: freePricing.currency,
-                        durationDays: freeLimits.durationDays,
-                    }
-                );
-
-                // Create initial usage tracking
-                await databases.createDocument(DATABASE_ID, USER_USAGE_ID, ID.unique(), {
-                    userId: user.$id,
-                    workspacesCount: 1,
-                    projectsCount: "{}",
-                    roomsCount: "{}",
-                    aiCreditsUsed: 0,
-                    aiCreditsPerWorkspace: "{}",
-                    lastUpdated: new Date().toISOString(),
-                });
-
-                return c.json({ data: newSubscription });
-            }
-
-            return c.json({ data: subscription });
+            return c.json({ data: subscription ?? null });
         } catch (error) {
             console.error("Error fetching subscription:", error);
             return c.json({ error: "Failed to fetch subscription" }, 500);
@@ -107,18 +67,14 @@ const app = new Hono()
         async (c) => {
             const databases = c.get("databases");
             const user = c.get("user");
-            const { plan, billingCycle } = c.req.valid("json");
+            const { plan, billingCycle, workspaceId } = c.req.valid("json");
 
             try {
-                // Cannot create FREE subscription manually
+
                 if (plan === SubscriptionPlan.FREE) {
-                    return c.json(
-                        { error: "Cannot create FREE subscription manually" },
-                        400
-                    );
+                    return c.json({ error: "Cannot create FREE subscription manually" }, 400);
                 }
 
-                // Enterprise requires custom pricing - contact sales
                 if (plan === SubscriptionPlan.ENTERPRISE) {
                     return c.json(
                         { error: "Enterprise plans require custom pricing. Please contact sales." },
@@ -126,42 +82,103 @@ const app = new Hono()
                     );
                 }
 
-                // Get current subscription
-                const currentSubscription = await getUserSubscription({
-                    databases,
-                    userId: user.$id,
-                });
+                // Cancel any existing paid subscription before creating a new one.
+                const currentSubscription = await getUserSubscription({ databases, userId: user.$id });
+                if (
+                    currentSubscription &&
+                    currentSubscription.plan !== SubscriptionPlan.FREE &&
+                    currentSubscription.razorpaySubscriptionId
+                ) {
+                    await cancelRazorpaySubscriptionSafe(currentSubscription.razorpaySubscriptionId, false);
+                    await databases.updateDocument(DATABASE_ID, SUBSCRIPTIONS_ID, currentSubscription.$id, {
+                        status: SubscriptionStatus.CANCELLED,
+                    });
+                }
+
+                // End workspace trial / abandoned checkouts before creating a replacement.
+                if (workspaceId) {
+                    await supersedeWorkspaceSubscriptions(databases, workspaceId);
+                }
+
+                const planLimits = PLAN_LIMITS[plan];
+                const planPricing = PLAN_PRICING[plan];
+                const startDate = new Date();
+
+                // ── EVENT plan: one-time Razorpay order ─────────────────────────────────
+                if (plan === SubscriptionPlan.EVENT) {
+                    const flatPrice = planPricing.monthly!;
+                    const order = await createRazorpayOrder(flatPrice, planPricing.currency);
+
+                    const endDate = new Date();
+                    endDate.setDate(endDate.getDate() + 14);
+
+                    const newSubscription = await databases.createDocument(
+                        DATABASE_ID, SUBSCRIPTIONS_ID, ID.unique(),
+                        {
+                            userId: user.$id,
+                            ...(workspaceId && { workspaceId }),
+                            plan,
+                            status: SubscriptionStatus.PENDING,
+                            razorpayOrderId: order.id,
+                            currentPeriodStart: startDate.toISOString(),
+                            currentPeriodEnd: endDate.toISOString(),
+                            cancelAtPeriodEnd: false,
+                            billingCycle: "ONE_TIME",
+                            workspaces: planLimits.workspaces,
+                            projectsPerWorkspace: planLimits.projectsPerWorkspace,
+                            membersPerWorkspace: planLimits.membersPerWorkspace,
+                            roomsPerWorkspace: planLimits.roomsPerWorkspace,
+                            aiCredits: planLimits.aiCredits,
+                            aiCreditsPerUser: planLimits.aiCreditsPerUser,
+                            price: flatPrice,
+                            currency: planPricing.currency,
+                            durationDays: planLimits.durationDays,
+                        }
+                    );
+
+                    return c.json({
+                        data: {
+                            subscription: newSubscription,
+                            razorpayOrderId: order.id,
+                            razorpayKey: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                            amount: order.amount,
+                            currency: order.currency,
+                            prefill: { name: user.name, email: user.email },
+                        },
+                    });
+                }
+
+                // ── Per-seat recurring plans (PRO / STANDARD) ────────────────────────────
+                // Start with quantity=1. Seat count is synced automatically when
+                // members join or leave the workspace.
+                const seats = 1;
+                const pricePerSeat = billingCycle === "MONTHLY" ? planPricing.monthly! : planPricing.yearly!;
 
                 const razorpayPlanIds: Record<string, string | undefined> = {
-                    "PRO_MONTHLY": process.env.RAZORPAY_PLAN_PRO_MONTHLY,
-                    "PRO_YEARLY": process.env.RAZORPAY_PLAN_PRO_YEARLY,
-                    "STANDARD_MONTHLY": process.env.RAZORPAY_PLAN_STANDARD_MONTHLY,
-                    "STANDARD_YEARLY": process.env.RAZORPAY_PLAN_STANDARD_YEARLY,
+                    PRO_MONTHLY: process.env.RAZORPAY_PLAN_PRO_MONTHLY,
+                    PRO_YEARLY: process.env.RAZORPAY_PLAN_PRO_YEARLY,
+                    STANDARD_MONTHLY: process.env.RAZORPAY_PLAN_STANDARD_MONTHLY,
+                    STANDARD_YEARLY: process.env.RAZORPAY_PLAN_STANDARD_YEARLY,
                 };
 
                 const planKey = `${plan}_${billingCycle}`;
                 const razorpayPlanId = razorpayPlanIds[planKey];
 
                 if (!razorpayPlanId) {
-                    console.error(
-                        `Razorpay plan ID not configured for ${planKey}. Set env var RAZORPAY_PLAN_${planKey}.`
-                    );
+                    console.error(`Razorpay plan ID not configured for ${planKey}.`);
                     return c.json(
-                        { error: "Subscription plan not configured. Please contact support." },
+                        { error: `Plan not configured for ${plan}. Run "bun run setup:razorpay-plans" and update your environment.` },
                         500
                     );
                 }
 
-                // Razorpay caps total_count at 12 for yearly and 120 for monthly.
-                // Pick the max so subscriptions don't silently terminate.
                 const razorpaySubscription = await createRazorpaySubscription(
                     razorpayPlanId,
                     undefined,
-                    billingCycle === "MONTHLY" ? 120 : 12
+                    billingCycle === "MONTHLY" ? 120 : 12,
+                    seats,
                 );
 
-                // Calculate period dates
-                const startDate = new Date();
                 const endDate = new Date();
                 if (billingCycle === "MONTHLY") {
                     endDate.setMonth(endDate.getMonth() + 1);
@@ -169,36 +186,11 @@ const app = new Hono()
                     endDate.setFullYear(endDate.getFullYear() + 1);
                 }
 
-                // Cancel current subscription if exists and is not FREE
-                if (
-                    currentSubscription &&
-                    currentSubscription.plan !== SubscriptionPlan.FREE &&
-                    currentSubscription.razorpaySubscriptionId
-                ) {
-                    await cancelRazorpaySubscription(
-                        currentSubscription.razorpaySubscriptionId,
-                        false
-                    );
-                    await databases.updateDocument(
-                        DATABASE_ID,
-                        SUBSCRIPTIONS_ID,
-                        currentSubscription.$id,
-                        {
-                            status: SubscriptionStatus.CANCELLED,
-                        }
-                    );
-                }
-
-                // Create new subscription record
-                const planLimits = PLAN_LIMITS[plan];
-                const planPricing = PLAN_PRICING[plan];
-
                 const newSubscription = await databases.createDocument(
-                    DATABASE_ID,
-                    SUBSCRIPTIONS_ID,
-                    ID.unique(),
+                    DATABASE_ID, SUBSCRIPTIONS_ID, ID.unique(),
                     {
                         userId: user.$id,
+                        ...(workspaceId && { workspaceId }),
                         plan,
                         status: SubscriptionStatus.PENDING,
                         razorpaySubscriptionId: razorpaySubscription.id,
@@ -207,13 +199,14 @@ const app = new Hono()
                         currentPeriodEnd: endDate.toISOString(),
                         cancelAtPeriodEnd: false,
                         billingCycle,
+                        seatCount: seats,
                         workspaces: planLimits.workspaces,
                         projectsPerWorkspace: planLimits.projectsPerWorkspace,
-                        membersPerWorkspace: planLimits.membersPerWorkspace,
+                        membersPerWorkspace: -1,    // unlimited — synced via member join/leave
                         roomsPerWorkspace: planLimits.roomsPerWorkspace,
-                        aiCredits: planLimits.aiCredits,
+                        aiCredits: planLimits.aiCreditsPerUser, // 1 seat initially; synced on member change
                         aiCreditsPerUser: planLimits.aiCreditsPerUser,
-                        price: billingCycle === "MONTHLY" ? planPricing.monthly : planPricing.yearly,
+                        price: pricePerSeat,        // per-seat rate, not a total
                         currency: planPricing.currency,
                         durationDays: planLimits.durationDays,
                     }
@@ -224,11 +217,24 @@ const app = new Hono()
                         subscription: newSubscription,
                         razorpaySubscriptionId: razorpaySubscription.id,
                         razorpayKey: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                        prefill: { name: user.name, email: user.email },
                     },
                 });
             } catch (error) {
                 console.error("Error creating subscription:", error);
-                return c.json({ error: "Failed to create subscription" }, 500);
+                const message = getRazorpayErrorMessage(error);
+                const isInvalidPlan =
+                    message.toLowerCase().includes("invalid") &&
+                    message.toLowerCase().includes("id");
+
+                return c.json(
+                    {
+                        error: isInvalidPlan
+                            ? "Invalid Razorpay plan ID. Run \"bun run setup:razorpay-plans\" and restart the server."
+                            : message || "Failed to create subscription",
+                    },
+                    500
+                );
             }
         }
     )
@@ -241,30 +247,38 @@ const app = new Hono()
         async (c) => {
             const databases = c.get("databases");
             const user = c.get("user");
-            const { razorpayPaymentId, razorpaySubscriptionId, razorpaySignature } =
+            const { razorpayPaymentId, razorpaySubscriptionId, razorpayOrderId, razorpaySignature } =
                 c.req.valid("json");
 
+            if (!razorpaySubscriptionId && !razorpayOrderId) {
+                return c.json({ error: "razorpaySubscriptionId or razorpayOrderId is required" }, 400);
+            }
+
             try {
-                // Verify signature
-                const isValid = verifyRazorpaySignature(
-                    razorpayPaymentId,
-                    razorpaySubscriptionId,
-                    razorpaySignature
-                );
+                // Verify signature — order and subscription use different signing schemes.
+                const isValid = razorpayOrderId
+                    ? verifyRazorpayOrderSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature)
+                    : verifyRazorpaySignature(razorpayPaymentId, razorpaySubscriptionId!, razorpaySignature);
 
                 if (!isValid) {
                     return c.json({ error: "Invalid payment signature" }, 400);
                 }
 
-                // Find subscription by Razorpay subscription ID
+                // Locate the pending subscription record.
                 const subscriptions = await databases.listDocuments<Subscription>(
                     DATABASE_ID,
                     SUBSCRIPTIONS_ID,
-                    [
-                        Query.equal("userId", user.$id),
-                        Query.equal("razorpaySubscriptionId", razorpaySubscriptionId),
-                        Query.limit(1),
-                    ]
+                    razorpayOrderId
+                        ? [
+                            Query.equal("userId", user.$id),
+                            Query.equal("razorpayOrderId", razorpayOrderId),
+                            Query.limit(1),
+                        ]
+                        : [
+                            Query.equal("userId", user.$id),
+                            Query.equal("razorpaySubscriptionId", razorpaySubscriptionId!),
+                            Query.limit(1),
+                        ]
                 );
 
                 if (subscriptions.documents.length === 0) {
@@ -272,6 +286,10 @@ const app = new Hono()
                 }
 
                 const subscription = subscriptions.documents[0];
+
+                if (subscription.status === SubscriptionStatus.ACTIVE) {
+                    return c.json({ data: subscription });
+                }
 
                 // Update subscription status to ACTIVE
                 const updatedSubscription = await databases.updateDocument(
@@ -282,6 +300,25 @@ const app = new Hono()
                         status: SubscriptionStatus.ACTIVE,
                     }
                 );
+
+                if (subscription.workspaceId) {
+                    await supersedeWorkspaceSubscriptions(
+                        databases,
+                        subscription.workspaceId,
+                        subscription.$id,
+                    );
+                }
+
+                void sendSubscriptionConfirmationEmail({
+                    name: user.name,
+                    email: user.email,
+                    plan: subscription.plan,
+                    billingCycle: subscription.billingCycle,
+                    price: subscription.price ?? null,
+                    currency: subscription.currency,
+                    periodEnd: subscription.currentPeriodEnd,
+                    paymentId: razorpayPaymentId,
+                });
 
                 return c.json({ data: updatedSubscription });
             } catch (error) {
@@ -299,13 +336,17 @@ const app = new Hono()
         async (c) => {
             const databases = c.get("databases");
             const user = c.get("user");
-            const { cancelAtPeriodEnd } = c.req.valid("json");
+            const { cancelAtPeriodEnd, workspaceId } = c.req.valid("json");
 
             try {
-                const subscription = await getUserSubscription({
-                    databases,
-                    userId: user.$id,
-                });
+                let subscription;
+
+                if (workspaceId) {
+                    const result = await getWorkspaceSubscription({ databases, workspaceId });
+                    subscription = result.subscription;
+                } else {
+                    subscription = await getUserSubscription({ databases, userId: user.$id });
+                }
 
                 if (!subscription) {
                     return c.json({ error: "No active subscription found" }, 404);
@@ -313,6 +354,10 @@ const app = new Hono()
 
                 if (subscription.plan === SubscriptionPlan.FREE) {
                     return c.json({ error: "Cannot cancel FREE plan" }, 400);
+                }
+
+                if (subscription.billingCycle === "ONE_TIME") {
+                    return c.json({ error: "One-time plans cannot be cancelled" }, 400);
                 }
 
                 if (subscription.razorpaySubscriptionId) {
@@ -348,10 +393,15 @@ const app = new Hono()
         const user = c.get("user");
 
         try {
-            const subscription = await getUserSubscription({
-                databases,
-                userId: user.$id,
-            });
+            const workspaceId = c.req.query("workspaceId");
+            let subscription;
+
+            if (workspaceId) {
+                const result = await getWorkspaceSubscription({ databases, workspaceId });
+                subscription = result.subscription;
+            } else {
+                subscription = await getUserSubscription({ databases, userId: user.$id });
+            }
 
             if (!subscription) {
                 return c.json({ error: "No subscription found" }, 404);
@@ -365,15 +415,69 @@ const app = new Hono()
                 DATABASE_ID,
                 SUBSCRIPTIONS_ID,
                 subscription.$id,
-                {
-                    cancelAtPeriodEnd: false,
-                }
+                { cancelAtPeriodEnd: false }
             );
 
             return c.json({ data: updatedSubscription });
         } catch (error) {
             console.error("Error resuming subscription:", error);
             return c.json({ error: "Failed to resume subscription" }, 500);
+        }
+    })
+
+    // Get subscription for a specific workspace.
+    // Self-heals by creating a FREE subscription if the workspace exists but has none
+    // (covers workspaces created before the subscription system was in place).
+    .get("/workspace/:workspaceId", sessionMiddleware, async (c) => {
+        const databases = c.get("databases");
+        const workspaceId = c.req.param("workspaceId");
+
+        try {
+            const result = await getWorkspaceSubscription({ databases, workspaceId });
+
+            if (result.subscription) {
+                return c.json({ data: result.subscription });
+            }
+
+            const existingSubs = await listWorkspaceSubscriptions(databases, workspaceId);
+            if (existingSubs.length > 0) {
+                return c.json({ data: existingSubs[0] });
+            }
+
+            // No subscription found — create a FREE one for this workspace.
+            const workspace = await databases.getDocument(DATABASE_ID, WORKSPACE_ID, workspaceId);
+            const freeEnd = new Date();
+            freeEnd.setDate(freeEnd.getDate() + 30);
+            const freeLimits = PLAN_LIMITS[SubscriptionPlan.FREE];
+            const freePricing = PLAN_PRICING[SubscriptionPlan.FREE];
+            const newSub = await databases.createDocument<Subscription>(
+                DATABASE_ID,
+                SUBSCRIPTIONS_ID,
+                ID.unique(),
+                {
+                    userId: workspace.userId,
+                    workspaceId,
+                    plan: SubscriptionPlan.FREE,
+                    status: SubscriptionStatus.ACTIVE,
+                    currentPeriodStart: new Date().toISOString(),
+                    currentPeriodEnd: freeEnd.toISOString(),
+                    cancelAtPeriodEnd: false,
+                    billingCycle: "MONTHLY",
+                    workspaces: freeLimits.workspaces,
+                    projectsPerWorkspace: freeLimits.projectsPerWorkspace,
+                    membersPerWorkspace: freeLimits.membersPerWorkspace,
+                    roomsPerWorkspace: freeLimits.roomsPerWorkspace,
+                    aiCredits: freeLimits.aiCredits,
+                    aiCreditsPerUser: freeLimits.aiCreditsPerUser,
+                    price: freePricing.monthly,
+                    currency: freePricing.currency,
+                    durationDays: freeLimits.durationDays,
+                }
+            );
+            return c.json({ data: newSub });
+        } catch (error) {
+            console.error("Error fetching workspace subscription:", error);
+            return c.json({ error: "Failed to fetch workspace subscription" }, 500);
         }
     })
 

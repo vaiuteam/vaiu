@@ -5,6 +5,7 @@ export enum SubscriptionPlan {
     PRO = "PRO",
     STANDARD = "STANDARD",
     ENTERPRISE = "ENTERPRISE",
+    EVENT = "EVENT",
 }
 
 export enum SubscriptionStatus {
@@ -15,9 +16,9 @@ export enum SubscriptionStatus {
 }
 
 export enum AIFeatureCost {
-    SUMMARY = 2,        // AI summary generation: 2 credits
-    CODE_REVIEW = 5,    // AI code review: 5 credits
-    TEST_GENERATION = 10, // AI test generation: 10 credits
+    SUMMARY = 2,
+    CODE_REVIEW = 5,
+    TEST_GENERATION = 10,
 }
 
 export interface PlanLimits {
@@ -25,57 +26,67 @@ export interface PlanLimits {
     projectsPerWorkspace: number;
     membersPerWorkspace: number;
     roomsPerWorkspace: number;
-    aiCredits: number; // Total workspace pool
-    aiCreditsPerUser: number; // Per-user monthly quota
-    durationDays: number | null; // null for unlimited
+    aiCredits: number;
+    aiCreditsPerUser: number;
+    durationDays: number | null;
 }
 
-// Invariant: aiCredits (workspace pool) >= membersPerWorkspace * aiCreditsPerUser
-// so every member can actually reach their advertised per-user quota.
-// For ENTERPRISE (unlimited members), the pool is set to unlimited too.
 export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
     [SubscriptionPlan.FREE]: {
         workspaces: 1,
         projectsPerWorkspace: 1,
         membersPerWorkspace: 5,
         roomsPerWorkspace: 2,
-        aiCredits: 25, // 5 members × 5 per-user
-        aiCreditsPerUser: 5,
+        aiCredits: 100,
+        aiCreditsPerUser: 100,
         durationDays: 30,
     },
     [SubscriptionPlan.PRO]: {
         workspaces: 5,
-        projectsPerWorkspace: 5,
-        membersPerWorkspace: 15,
+        projectsPerWorkspace: 10,
+        // Per-seat plan: actual member limit = seatCount stored on subscription doc.
+        // -1 here so the default falls through to seatCount at check time.
+        membersPerWorkspace: -1,
         roomsPerWorkspace: 10,
-        aiCredits: 1500, // 15 members × 100 per-user
-        aiCreditsPerUser: 100,
+        // AI credit pool scales with seats (seatCount × aiCreditsPerUser at create time).
+        aiCredits: -1,
+        aiCreditsPerUser: 200,
         durationDays: null,
     },
     [SubscriptionPlan.STANDARD]: {
         workspaces: 15,
         projectsPerWorkspace: 50,
-        membersPerWorkspace: 50,
+        membersPerWorkspace: -1,
         roomsPerWorkspace: 50,
-        aiCredits: 10000, // 50 members × 200 per-user
-        aiCreditsPerUser: 200,
+        aiCredits: -1,
+        aiCreditsPerUser: 500,
         durationDays: null,
     },
     [SubscriptionPlan.ENTERPRISE]: {
-        workspaces: -1, // unlimited
-        projectsPerWorkspace: -1, // unlimited
-        membersPerWorkspace: -1, // unlimited
-        roomsPerWorkspace: -1, // unlimited
-        aiCredits: -1, // unlimited (members are unlimited)
+        workspaces: -1,
+        projectsPerWorkspace: -1,
+        membersPerWorkspace: -1,
+        roomsPerWorkspace: -1,
+        aiCredits: -1,
         aiCreditsPerUser: 1000,
         durationDays: null,
+    },
+    [SubscriptionPlan.EVENT]: {
+        workspaces: 1,
+        projectsPerWorkspace: 10,
+        membersPerWorkspace: 150,
+        roomsPerWorkspace: 10,
+        aiCredits: 1000,
+        aiCreditsPerUser: 100,
+        durationDays: 14,
     },
 };
 
 export interface PlanPricing {
-    monthly: number | null; // null for custom pricing (Enterprise)
-    yearly: number | null;  // null for custom pricing (Enterprise)
+    monthly: number | null;
+    yearly: number | null;
     currency: string;
+    perSeat: boolean;
 }
 
 export const PLAN_PRICING: Record<SubscriptionPlan, PlanPricing> = {
@@ -83,35 +94,48 @@ export const PLAN_PRICING: Record<SubscriptionPlan, PlanPricing> = {
         monthly: 0,
         yearly: 0,
         currency: "USD",
+        perSeat: false,
     },
     [SubscriptionPlan.PRO]: {
-        monthly: 12,
-        yearly: 120, // ~17% off vs 12 * 12
+        monthly: 8,    // per seat / month
+        yearly: 80,    // per seat / year (~17% off)
         currency: "USD",
+        perSeat: true,
     },
     [SubscriptionPlan.STANDARD]: {
-        monthly: 30,
-        yearly: 300, // ~17% off vs 30 * 12
+        monthly: 14,   // per seat / month
+        yearly: 140,   // per seat / year (~17% off)
         currency: "USD",
+        perSeat: true,
     },
     [SubscriptionPlan.ENTERPRISE]: {
-        monthly: null, // Contact sales
-        yearly: null,  // Contact sales
+        monthly: null,
+        yearly: null,
         currency: "USD",
+        perSeat: false,
+    },
+    [SubscriptionPlan.EVENT]: {
+        monthly: 49,   // flat one-time fee for 14-day event access
+        yearly: null,
+        currency: "USD",
+        perSeat: false,
     },
 };
 
 export type Subscription = Models.Document & {
     userId: string;
+    workspaceId?: string;
     plan: SubscriptionPlan;
     status: SubscriptionStatus;
     razorpaySubscriptionId?: string;
+    razorpayOrderId?: string;
     razorpayCustomerId?: string;
     razorpayPlanId?: string;
     currentPeriodStart: string;
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
-    billingCycle: "MONTHLY" | "YEARLY";
+    billingCycle: "MONTHLY" | "YEARLY" | "ONE_TIME";
+    seatCount?: number;
     // Plan limits
     workspaces?: number;
     projectsPerWorkspace?: number;
@@ -119,8 +143,6 @@ export type Subscription = Models.Document & {
     roomsPerWorkspace?: number;
     aiCredits?: number;
     aiCreditsPerUser?: number;
-    // The amount actually charged for this subscription per `billingCycle`,
-    // in the smallest unit-equivalent of `currency`. null for FREE / Enterprise.
     price: number | null;
     currency: string;
     durationDays: number | null;

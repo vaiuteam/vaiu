@@ -10,6 +10,7 @@ import { sessionMiddleware } from "@/lib/session-middleware";
 
 import { getMember, getProjectMember, isSuperAdmin } from "../utilts";
 import { Member, MemberRole } from "../types";
+import { syncWorkspaceSeatCount } from "@/features/subscriptions/server/sync";
 
 const app = new Hono()
   .get(
@@ -288,6 +289,8 @@ const app = new Hono()
       }
 
       await databases.deleteDocument(DATABASE_ID, MEMBERS_ID, memberId);
+
+      void syncWorkspaceSeatCount(databases, memberToDelete.workspaceId);
 
       return c.json({
         data: {

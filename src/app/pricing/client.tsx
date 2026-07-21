@@ -1,30 +1,31 @@
 "use client";
 
 import { SubscriptionFlow } from "@/features/subscriptions/components/subscription-flow";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { MarketingPageLayout } from "@/components/marketing-page-layout";
 
-export const PricingClient = () => {
-    const router = useRouter();
+interface PricingClientProps {
+    workspaceId?: string;
+}
 
+export const PricingClient = ({ workspaceId }: PricingClientProps) => {
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
-                <Button
-                    variant="ghost"
-                    onClick={() => router.push("/")}
-                    className="mb-8"
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Go to Home
-                </Button>
-                <div className="flex justify-center">
-                    <div className="w-full max-w-7xl">
-                        <SubscriptionFlow />
-                    </div>
-                </div>
+        <MarketingPageLayout>
+            <div className="mx-auto w-full max-w-7xl space-y-10">
+                <section className="text-center">
+                    <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-blue-600">
+                        Pricing
+                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                        Choose the plan that fits your team
+                    </h1>
+                    <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+                        Start free, then upgrade when you need more workspaces, members, and AI
+                        credits. Cancel anytime at the end of your billing period.
+                    </p>
+                </section>
+
+                <SubscriptionFlow workspaceId={workspaceId} />
             </div>
-        </div>
+        </MarketingPageLayout>
     );
 };
